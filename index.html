@@ -19,10 +19,714 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Enhancement: global layer styles (injected BEFORE app so z-index is respected) -->
+    <style>
+      /* ── Cursor ── */
+      *, *::before, *::after { cursor: none !important; }
+      #eq-cursor {
+        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99999;
+        width: 12px; height: 12px; background: #00ffe0; border-radius: 50%;
+        transform: translate(-50%,-50%);
+        box-shadow: 0 0 12px #00ffe0, 0 0 30px rgba(0,255,224,0.4);
+        transition: width 0.15s, height 0.15s, background 0.15s;
+        mix-blend-mode: screen;
+      }
+      #eq-cursor.big { width: 32px; height: 32px; background: rgba(0,255,224,0.15); border: 1.5px solid #00ffe0; }
+      #eq-cursor-trail {
+        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99998;
+        width: 32px; height: 32px; border: 1px solid rgba(0,255,224,0.3); border-radius: 50%;
+        transform: translate(-50%,-50%);
+        transition: transform 0.12s ease-out, left 0.12s ease-out, top 0.12s ease-out;
+      }
+
+      /* ── Three.js Background Canvas ── */
+      #eq-bg-canvas {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 0; pointer-events: none;
+        opacity: 0; transition: opacity 1.2s;
+      }
+      #eq-bg-canvas.visible { opacity: 1; }
+
+      /* ── Scanline overlay ── */
+      #eq-scanlines {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 1; pointer-events: none;
+        background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+        animation: scanMove 8s linear infinite;
+      }
+      @keyframes scanMove { from { background-position: 0 0; } to { background-position: 0 100px; } }
+
+      /* ── Noise vignette ── */
+      #eq-vignette {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 1; pointer-events: none;
+        background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%);
+      }
+
+      /* ── Crisis HUD trigger button ── */
+      #eq-crisis-btn {
+        position: fixed; bottom: 28px; right: 28px; z-index: 9000;
+        background: rgba(0,0,0,0.85); border: 1px solid #00ffe0;
+        color: #00ffe0; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700;
+        letter-spacing: 0.12em; text-transform: uppercase;
+        padding: 10px 18px; cursor: pointer !important;
+        border-radius: 3px;
+        box-shadow: 0 0 16px rgba(0,255,224,0.25), inset 0 0 8px rgba(0,255,224,0.05);
+        animation: pulseBorder 2.4s ease-in-out infinite;
+        display: flex; align-items: center; gap: 8px;
+        backdrop-filter: blur(12px);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      #eq-crisis-btn:hover { transform: scale(1.04); box-shadow: 0 0 28px rgba(0,255,224,0.5); }
+      #eq-crisis-btn .dot {
+        width: 7px; height: 7px; border-radius: 50%; background: #ff4444;
+        box-shadow: 0 0 6px #ff4444; animation: blink 1s ease-in-out infinite;
+      }
+      @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+      @keyframes pulseBorder {
+        0%,100%{ box-shadow: 0 0 16px rgba(0,255,224,0.25), inset 0 0 8px rgba(0,255,224,0.05); }
+        50%{ box-shadow: 0 0 28px rgba(0,255,224,0.5), inset 0 0 14px rgba(0,255,224,0.1); }
+      }
+
+      /* ── Crisis Room Panel ── */
+      #eq-crisis-panel {
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.88);
+        z-index: 9999; width: min(520px, 94vw); max-height: 90vh; overflow-y: auto;
+        background: rgba(4,8,16,0.97); border: 1px solid rgba(0,255,224,0.35);
+        border-radius: 4px; padding: 0;
+        box-shadow: 0 0 60px rgba(0,255,224,0.15), 0 0 120px rgba(0,0,0,0.8);
+        backdrop-filter: blur(24px);
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.3s, transform 0.3s;
+        font-family: 'Inter', sans-serif;
+      }
+      #eq-crisis-panel.open { opacity: 1; pointer-events: auto; transform: translate(-50%,-50%) scale(1); }
+
+      .eq-panel-header {
+        padding: 18px 24px 14px;
+        border-bottom: 1px solid rgba(0,255,224,0.15);
+        display: flex; justify-content: space-between; align-items: flex-start;
+      }
+      .eq-panel-title {
+        font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 0.2em;
+        text-transform: uppercase; color: rgba(0,255,224,0.6); margin-bottom: 4px;
+      }
+      .eq-panel-headline {
+        font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700;
+        color: #fff; line-height: 1.2; max-width: 340px;
+      }
+      .eq-close-btn {
+        background: none; border: none; color: rgba(255,255,255,0.4); font-size: 20px;
+        cursor: pointer !important; line-height: 1; padding: 0; margin-left: 12px; flex-shrink: 0;
+        transition: color 0.2s;
+      }
+      .eq-close-btn:hover { color: #fff; }
+
+      .eq-panel-body { padding: 20px 24px 24px; }
+
+      .eq-intel-bar {
+        display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;
+      }
+      .eq-intel-chip {
+        font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+        padding: 4px 10px; border-radius: 2px; font-family: 'Rajdhani', sans-serif; font-weight: 600;
+      }
+      .eq-intel-chip.red { background: rgba(255,68,68,0.15); color: #ff6666; border: 1px solid rgba(255,68,68,0.3); }
+      .eq-intel-chip.yellow { background: rgba(255,200,68,0.12); color: #ffc844; border: 1px solid rgba(255,200,68,0.25); }
+      .eq-intel-chip.blue { background: rgba(0,160,255,0.12); color: #44aaff; border: 1px solid rgba(0,160,255,0.25); }
+
+      .eq-crisis-desc {
+        font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.72);
+        margin-bottom: 22px; border-left: 2px solid rgba(0,255,224,0.25);
+        padding-left: 14px;
+      }
+
+      .eq-crisis-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+      .eq-crisis-opt {
+        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 3px; padding: 14px 16px; cursor: pointer !important;
+        transition: border-color 0.2s, background 0.2s;
+        display: flex; align-items: flex-start; gap: 14px;
+      }
+      .eq-crisis-opt:hover:not(.chosen) { border-color: rgba(0,255,224,0.4); background: rgba(0,255,224,0.04); }
+      .eq-crisis-opt.chosen { border-color: #00ffe0; background: rgba(0,255,224,0.08); }
+      .eq-crisis-opt.wrong { border-color: rgba(255,68,68,0.5); background: rgba(255,68,68,0.06); }
+      .eq-opt-key {
+        font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 0.1em;
+        color: rgba(0,255,224,0.6); font-weight: 700; white-space: nowrap; padding-top: 1px;
+      }
+      .eq-opt-text { font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.8); }
+      .eq-opt-effect {
+        font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 5px;
+        font-style: italic;
+      }
+
+      .eq-outcome {
+        display: none; background: rgba(0,255,224,0.06); border: 1px solid rgba(0,255,224,0.2);
+        border-radius: 3px; padding: 14px 16px; margin-bottom: 18px;
+      }
+      .eq-outcome.show { display: block; }
+      .eq-outcome.fail { background: rgba(255,68,68,0.06); border-color: rgba(255,68,68,0.25); }
+      .eq-outcome-title { font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:6px; }
+      .eq-outcome.show .eq-outcome-title { color:#00ffe0; }
+      .eq-outcome.fail .eq-outcome-title { color:#ff6666; }
+      .eq-outcome-body { font-size:13px; line-height:1.55; color:rgba(255,255,255,0.72); }
+
+      .eq-score-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;
+        margin-top: 4px;
+      }
+      .eq-score-label { font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.35); }
+      .eq-score-val { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; color:#00ffe0; }
+      .eq-next-btn {
+        background: rgba(0,255,224,0.1); border: 1px solid rgba(0,255,224,0.4); color:#00ffe0;
+        font-family:'Rajdhani',sans-serif; font-size:12px; letter-spacing:0.15em; text-transform:uppercase;
+        padding: 8px 18px; cursor: pointer !important; border-radius:2px;
+        transition: background 0.2s, box-shadow 0.2s;
+      }
+      .eq-next-btn:hover { background:rgba(0,255,224,0.2); box-shadow:0 0 14px rgba(0,255,224,0.25); }
+      .eq-next-btn:disabled { opacity:0.3; pointer-events:none; }
+
+      /* ── SIGINT ticker ── */
+      #eq-ticker-wrap {
+        position: fixed; bottom: 0; left: 0; width: 100%; z-index: 8000; pointer-events: none;
+        background: rgba(0,0,0,0.75); border-top: 1px solid rgba(0,255,224,0.12);
+        backdrop-filter: blur(8px); overflow: hidden; height: 28px;
+        display: flex; align-items: center;
+      }
+      #eq-ticker-label {
+        font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.25em;
+        color:#00ffe0; padding: 0 14px; flex-shrink:0; text-transform:uppercase; opacity:0.8;
+      }
+      #eq-ticker-track {
+        display: flex; align-items: center; animation: tickerScroll 36s linear infinite; white-space:nowrap;
+      }
+      .eq-tick-item {
+        font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.1em;
+        color:rgba(255,255,255,0.45); padding: 0 32px; text-transform:uppercase; flex-shrink:0;
+      }
+      .eq-tick-item span { color:#ffc844; }
+      @keyframes tickerScroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+      /* ── Floating geopolitical hotspots ── */
+      .eq-hotspot {
+        position: fixed; z-index: 7000; pointer-events: auto; cursor: pointer !important;
+        width: 10px; height: 10px; border-radius: 50%;
+        background: radial-gradient(circle, #ff4444, #ff000088);
+        box-shadow: 0 0 10px #ff4444, 0 0 24px rgba(255,68,68,0.4);
+        animation: hotspotPulse 2s ease-in-out infinite;
+      }
+      .eq-hotspot::before {
+        content:''; position:absolute; top:50%;left:50%; transform:translate(-50%,-50%);
+        width:22px; height:22px; border-radius:50%; border:1px solid rgba(255,68,68,0.4);
+        animation: ringExpand 2s ease-out infinite;
+      }
+      .eq-hotspot-tooltip {
+        position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+        background: rgba(4,8,16,0.95); border: 1px solid rgba(255,68,68,0.4);
+        color: #fff; font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.1em;
+        text-transform:uppercase; padding: 5px 10px; white-space:nowrap; border-radius:2px;
+        opacity:0; transition:opacity 0.2s; pointer-events:none;
+      }
+      .eq-hotspot:hover .eq-hotspot-tooltip { opacity:1; }
+      @keyframes hotspotPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+      @keyframes ringExpand { 0%{width:10px;height:10px;opacity:0.8} 100%{width:48px;height:48px;opacity:0} }
+
+      /* ── Scroll-reveal utility ── */
+      .eq-reveal { opacity:0; transform:translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+      .eq-reveal.in { opacity:1; transform:translateY(0); }
+
+      /* ── Typewriter effect on h1/hero headings ── */
+      .eq-typed::after { content:'|'; animation:cursorBlink 0.7s ease-in-out infinite; color:#00ffe0; }
+      @keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+      /* ── Glitch effect ── */
+      @keyframes glitch1 {
+        0%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,0)}
+        25%{clip-path:inset(70% 0 5% 0);transform:translate(3px,0)}
+        50%{clip-path:inset(40% 0 40% 0);transform:translate(-2px,0)}
+        75%{clip-path:inset(5% 0 80% 0);transform:translate(2px,0)}
+        100%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,0)}
+      }
+      @keyframes glitch2 {
+        0%{clip-path:inset(60% 0 20% 0);transform:translate(3px,0)}
+        25%{clip-path:inset(5% 0 70% 0);transform:translate(-3px,0)}
+        50%{clip-path:inset(40% 0 40% 0);transform:translate(2px,0)}
+        75%{clip-path:inset(80% 0 5% 0);transform:translate(-2px,0)}
+        100%{clip-path:inset(60% 0 20% 0);transform:translate(3px,0)}
+      }
+      .eq-glitch { position:relative; display:inline-block; }
+      .eq-glitch::before, .eq-glitch::after {
+        content:attr(data-text); position:absolute; top:0; left:0; width:100%; height:100%;
+        opacity:0; transition:opacity 0s;
+      }
+      .eq-glitch.glitching::before { opacity:1; color:#0ff; animation:glitch1 0.15s steps(2) infinite; }
+      .eq-glitch.glitching::after { opacity:1; color:#f0f; animation:glitch2 0.15s steps(2) infinite; }
+    </style>
+
+    <!-- Original app assets (unchanged) -->
     <script type="module" crossorigin src="/assets/index-B808EA05.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BQ34BD58.css">
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Enhancement: Three.js Background Canvas -->
+    <canvas id="eq-bg-canvas"></canvas>
+
+    <!-- Enhancement: Scanlines + Vignette -->
+    <div id="eq-scanlines"></div>
+    <div id="eq-vignette"></div>
+
+    <!-- Enhancement: Custom Cursor -->
+    <div id="eq-cursor"></div>
+    <div id="eq-cursor-trail"></div>
+
+    <!-- Enhancement: SIGINT Ticker -->
+    <div id="eq-ticker-wrap">
+      <div id="eq-ticker-label">SIGINT</div>
+      <div id="eq-ticker-track">
+        <span class="eq-tick-item">OPERATION BLACKTHORN — <span>ACTIVE</span></span>
+        <span class="eq-tick-item">ARCTIC STATION GAMMA: Anomalous transmissions detected — <span>INVESTIGATING</span></span>
+        <span class="eq-tick-item">DIPLOMATIC CHANNEL LAMBDA compromised — <span>BREACH CONFIRMED</span></span>
+        <span class="eq-tick-item">ECONOMIC EMBARGO on NORDVIK extended 90 days — <span>AUTHORIZED</span></span>
+        <span class="eq-tick-item">CELL ZETA — <span>RADIO SILENCE</span> — 72hrs</span>
+        <span class="eq-tick-item">STRATEGIC RESERVE ALPHA: Mobilization order pending — <span>AWAITING</span></span>
+        <span class="eq-tick-item">OPERATION BLACKTHORN — <span>ACTIVE</span></span>
+        <span class="eq-tick-item">ARCTIC STATION GAMMA: Anomalous transmissions detected — <span>INVESTIGATING</span></span>
+        <span class="eq-tick-item">DIPLOMATIC CHANNEL LAMBDA compromised — <span>BREACH CONFIRMED</span></span>
+        <span class="eq-tick-item">ECONOMIC EMBARGO on NORDVIK extended 90 days — <span>AUTHORIZED</span></span>
+        <span class="eq-tick-item">CELL ZETA — <span>RADIO SILENCE</span> — 72hrs</span>
+        <span class="eq-tick-item">STRATEGIC RESERVE ALPHA: Mobilization order pending — <span>AWAITING</span></span>
+      </div>
+    </div>
+
+    <!-- Enhancement: Crisis Room Button -->
+    <button id="eq-crisis-btn" title="Open Crisis Room">
+      <span class="dot"></span>
+      CRISIS ROOM
+    </button>
+
+    <!-- Enhancement: Crisis Room Panel -->
+    <div id="eq-crisis-panel">
+      <div class="eq-panel-header">
+        <div>
+          <div class="eq-panel-title">SECURE CHANNEL — EYES ONLY</div>
+          <div class="eq-panel-headline" id="eq-crisis-headline">Loading...</div>
+        </div>
+        <button class="eq-close-btn" id="eq-close-crisis">✕</button>
+      </div>
+      <div class="eq-panel-body">
+        <div class="eq-intel-bar" id="eq-intel-bar"></div>
+        <div class="eq-crisis-desc" id="eq-crisis-desc"></div>
+        <div class="eq-crisis-options" id="eq-crisis-options"></div>
+        <div class="eq-outcome" id="eq-outcome">
+          <div class="eq-outcome-title" id="eq-outcome-title"></div>
+          <div class="eq-outcome-body" id="eq-outcome-body"></div>
+        </div>
+        <div class="eq-score-bar">
+          <div>
+            <div class="eq-score-label">Power Index</div>
+            <div class="eq-score-val" id="eq-score-val">0</div>
+          </div>
+          <button class="eq-next-btn" id="eq-next-btn" disabled>NEXT CRISIS ›</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enhancement: Three.js + GSAP CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <script>
+    (function() {
+      'use strict';
+
+      // ── 1. Custom Cursor ──────────────────────────────────────────────
+      const cur = document.getElementById('eq-cursor');
+      const curT = document.getElementById('eq-cursor-trail');
+      let mx = -100, my = -100;
+      document.addEventListener('mousemove', e => {
+        mx = e.clientX; my = e.clientY;
+        cur.style.left = mx + 'px'; cur.style.top = my + 'px';
+        setTimeout(() => { curT.style.left = mx+'px'; curT.style.top = my+'px'; }, 80);
+      });
+      document.addEventListener('mouseenter', e => {
+        const t = e.target;
+        if (t && (t.tagName === 'A' || t.tagName === 'BUTTON' || t.closest('button') || t.closest('a') || t.style.cursor === 'pointer')) {
+          cur.classList.add('big');
+        }
+      }, true);
+      document.addEventListener('mouseleave', e => { cur.classList.remove('big'); }, true);
+
+      // ── 2. Three.js Background ────────────────────────────────────────
+      const canvas = document.getElementById('eq-bg-canvas');
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 0);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+      camera.position.set(0, 0, 4.5);
+
+      // Globe
+      const globeGeo = new THREE.SphereGeometry(1.6, 64, 64);
+      const globeMat = new THREE.MeshPhongMaterial({
+        color: 0x000e1a,
+        emissive: 0x001f3f,
+        emissiveIntensity: 0.3,
+        wireframe: false,
+        transparent: true,
+        opacity: 0.85,
+      });
+      const globe = new THREE.Mesh(globeGeo, globeMat);
+      scene.add(globe);
+
+      // Wireframe overlay
+      const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ffe0, wireframe: true, transparent: true, opacity: 0.06 });
+      const wireframe = new THREE.Mesh(new THREE.SphereGeometry(1.61, 32, 32), wireMat);
+      scene.add(wireframe);
+
+      // Atmosphere glow
+      const atmGeo = new THREE.SphereGeometry(1.72, 32, 32);
+      const atmMat = new THREE.MeshPhongMaterial({
+        color: 0x001833,
+        emissive: 0x003366,
+        emissiveIntensity: 0.8,
+        transparent: true,
+        opacity: 0.22,
+        side: THREE.BackSide,
+      });
+      scene.add(new THREE.Mesh(atmGeo, atmMat));
+
+      // Lights
+      const amb = new THREE.AmbientLight(0x001133, 0.5);
+      scene.add(amb);
+      const dirLight = new THREE.DirectionalLight(0x00ffe0, 0.6);
+      dirLight.position.set(3, 2, 3);
+      scene.add(dirLight);
+      const redLight = new THREE.PointLight(0xff3300, 0.4, 8);
+      redLight.position.set(-3, -1, 2);
+      scene.add(redLight);
+
+      // Hotspot dots on globe surface
+      const hotspotPositions = [
+        new THREE.Vector3(0.6, 1.0, 1.1),
+        new THREE.Vector3(-1.2, 0.5, 0.9),
+        new THREE.Vector3(0.9, -0.7, 1.1),
+        new THREE.Vector3(-0.4, 1.3, 0.9),
+        new THREE.Vector3(1.3, 0.2, 0.8),
+        new THREE.Vector3(-0.8, -1.0, 1.1),
+      ];
+      const dotMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
+      const dotGeo = new THREE.SphereGeometry(0.022, 8, 8);
+      hotspotPositions.forEach(pos => {
+        pos.normalize().multiplyScalar(1.63);
+        const dot = new THREE.Mesh(dotGeo, dotMat.clone());
+        dot.position.copy(pos);
+        scene.add(dot);
+      });
+
+      // Particle field
+      const particleCount = 1200;
+      const positions = new Float32Array(particleCount * 3);
+      for (let i = 0; i < particleCount; i++) {
+        const r = 2.5 + Math.random() * 8;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        positions[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+        positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+        positions[i*3+2] = r * Math.cos(phi);
+      }
+      const partGeo = new THREE.BufferGeometry();
+      partGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const partMat = new THREE.PointsMaterial({ color: 0x00ffe0, size: 0.018, transparent: true, opacity: 0.55 });
+      scene.add(new THREE.Points(partGeo, partMat));
+
+      // Orbit rings
+      function makeRing(radius, color, opacity) {
+        const geo = new THREE.RingGeometry(radius, radius + 0.004, 128);
+        const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide });
+        return new THREE.Mesh(geo, mat);
+      }
+      const ring1 = makeRing(1.9, 0x00ffe0, 0.2); ring1.rotation.x = Math.PI / 2.5;
+      const ring2 = makeRing(2.2, 0x0044ff, 0.12); ring2.rotation.x = Math.PI / 1.4; ring2.rotation.z = 0.4;
+      const ring3 = makeRing(2.5, 0xff2200, 0.08); ring3.rotation.x = Math.PI / 3; ring3.rotation.y = 1.0;
+      scene.add(ring1, ring2, ring3);
+
+      // Resize
+      function onResize() {
+        const w = window.innerWidth, h = window.innerHeight;
+        camera.aspect = w / h; camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
+      window.addEventListener('resize', onResize);
+      onResize();
+
+      // Mouse parallax
+      let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
+      document.addEventListener('mousemove', e => {
+        targetX = (e.clientX / window.innerWidth - 0.5) * 0.3;
+        targetY = (e.clientY / window.innerHeight - 0.5) * 0.3;
+      });
+
+      // Animate
+      let frame = 0;
+      function animate() {
+        requestAnimationFrame(animate);
+        frame++;
+        currentX += (targetX - currentX) * 0.04;
+        currentY += (targetY - currentY) * 0.04;
+
+        globe.rotation.y += 0.0012;
+        wireframe.rotation.y += 0.0012;
+        ring1.rotation.z += 0.0018;
+        ring2.rotation.z -= 0.0012;
+        ring3.rotation.y += 0.0009;
+
+        // Subtle camera drift following mouse
+        camera.position.x = currentX * 0.6;
+        camera.position.y = -currentY * 0.6;
+        camera.lookAt(0, 0, 0);
+
+        // Hotspot pulse
+        dotMat.color.setHSL(0, 1, 0.5 + 0.2 * Math.sin(frame * 0.05));
+
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // Fade in canvas after brief delay
+      setTimeout(() => canvas.classList.add('visible'), 600);
+
+      // ── 3. GSAP ScrollTrigger on React content ────────────────────────
+      if (window.gsap && window.ScrollTrigger) {
+        gsap.registerPlugin(ScrollTrigger);
+
+        // Poll for React to render content
+        function applyScrollAnimations() {
+          const root = document.getElementById('root');
+          if (!root || !root.children.length) {
+            setTimeout(applyScrollAnimations, 300);
+            return;
+          }
+
+          // Apply to all section-like elements
+          const candidates = root.querySelectorAll('section, article, [class*="section"], [class*="card"], [class*="feature"], [class*="hero"], h1, h2, h3, p');
+          candidates.forEach((el, i) => {
+            el.classList.add('eq-reveal');
+            ScrollTrigger.create({
+              trigger: el,
+              start: 'top 88%',
+              onEnter: () => {
+                gsap.to(el, {
+                  opacity: 1, y: 0, duration: 0.65,
+                  delay: (i % 5) * 0.07,
+                  ease: 'power2.out',
+                  onStart: () => el.classList.add('in'),
+                });
+              },
+              once: true,
+            });
+          });
+
+          // Glitch effect on first h1
+          const h1 = root.querySelector('h1');
+          if (h1 && !h1.classList.contains('eq-glitch')) {
+            const txt = h1.textContent;
+            h1.classList.add('eq-glitch');
+            h1.setAttribute('data-text', txt);
+
+            // Periodic glitch
+            function triggerGlitch() {
+              h1.classList.add('glitching');
+              setTimeout(() => h1.classList.remove('glitching'), 200 + Math.random() * 120);
+              setTimeout(triggerGlitch, 4000 + Math.random() * 5000);
+            }
+            setTimeout(triggerGlitch, 2000);
+          }
+        }
+        applyScrollAnimations();
+
+        // Parallax on scroll for globe canvas
+        gsap.to('#eq-bg-canvas', {
+          yPercent: 20,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: 'body',
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: true,
+          },
+        });
+      }
+
+      // ── 4. Floating Hotspots on-screen ────────────────────────────────
+      const regions = [
+        { name: 'NORTH ATLANTIC PACT ZONE', x: 18, y: 22 },
+        { name: 'EASTERN BLOC BORDER', x: 72, y: 28 },
+        { name: 'CASPIAN OIL FIELDS', x: 60, y: 45 },
+        { name: 'STRAIT OF HORMUZ', x: 63, y: 60 },
+      ];
+      regions.forEach(r => {
+        const hs = document.createElement('div');
+        hs.className = 'eq-hotspot';
+        hs.style.left = r.x + 'vw';
+        hs.style.top = r.y + 'vh';
+        const tip = document.createElement('div');
+        tip.className = 'eq-hotspot-tooltip';
+        tip.textContent = r.name;
+        hs.appendChild(tip);
+        hs.addEventListener('click', () => openCrisis());
+        document.body.appendChild(hs);
+      });
+
+      // ── 5. Crisis Room Game ────────────────────────────────────────────
+      const CRISES = [
+        {
+          headline: 'Agent VEGA Has Gone Dark',
+          tags: [{ label: 'PRIORITY ALPHA', cls: 'red' }, { label: 'HUMAN INTELLIGENCE', cls: 'blue' }, { label: 'TIME-SENSITIVE', cls: 'yellow' }],
+          desc: 'Deep-cover asset VEGA — embedded within the Ministry of Interior — has missed three consecutive check-ins. Last transmission suggests imminent exposure. Enemy counterintelligence is closing in. Your next move will determine whether VEGA survives, and whether your network stays intact.',
+          options: [
+            { key: 'A', text: 'Activate emergency extraction — pull VEGA out tonight', effect: '+12 Agent Safety / −6 Network Exposure', score: 12, outcome: { win: true, title: 'EXTRACTION SUCCESSFUL', body: 'VEGA is out. Network integrity maintained. However, the empty slot has been noticed by ministry counterparts. Expect increased surveillance on your remaining assets.' } },
+            { key: 'B', text: 'Order VEGA to go to ground — wait 72 hours for a cold window', effect: '+3 Deniability / −15 Agent Risk', score: -4, outcome: { win: false, title: 'VEGA COMPROMISED', body: 'The wait was too long. VEGA was detained at 0340 hours. Compartmentalization held — your network is intact — but a valuable asset is burned. Power index drops.' } },
+            { key: 'C', text: 'Flood the zone — deploy counter-disinformation to burn the lead', effect: '+8 Confusion / −4 Resources', score: 8, outcome: { win: true, title: 'OPERATION SMOKEHOUSE — SUCCESS', body: 'Disinformation campaign worked. VEGA has a 6-hour window. Exfiltration team is moving. Cost: two burned communication lines and a considerable budget draw.' } },
+            { key: 'D', text: 'Sacrifice VEGA — protect the network at all costs', effect: '−20 Ethics / +18 Network Security', score: 3, outcome: { win: false, title: 'COLD CALCULUS', body: 'VEGA was abandoned. The network holds. But your handler corps now knows what you\'re capable of. Recruitment will be harder. Some costs can\'t be measured in power.' } },
+          ],
+          best: 'A',
+        },
+        {
+          headline: 'Nuclear Facility — Unscheduled Shutdown',
+          tags: [{ label: 'CRITICAL', cls: 'red' }, { label: 'TECHNICAL INTEL', cls: 'blue' }],
+          desc: 'Satellite imaging shows an unscheduled 48-hour shutdown at the Karev-7 reactor complex — a facility designated civilian. SIGINT intercepts suggest foreign technicians were brought in under diplomatic cover. Analysts are split: sabotage, development, or cover for something else entirely.',
+          options: [
+            { key: 'A', text: 'Trigger a diplomatic incident — demand IAEA access immediately', effect: '+14 Transparency / −10 Relations', score: 6, outcome: { win: true, title: 'INSPECTION GRANTED', body: 'Political pressure worked. IAEA access was reluctantly granted. The facility was clean — but the precedent is set. Your adversary now knows you\'re watching closely.' } },
+            { key: 'B', text: 'Insert a HUMINT asset into the facility under maintenance cover', effect: '+18 Intelligence / −12 Asset Risk', score: 14, outcome: { win: true, title: 'PAYLOAD CONFIRMED', body: 'Your asset confirmed covert enrichment activity. The intelligence is priceless. Your Security Council briefing tomorrow will reshape the alliance calculus.' } },
+            { key: 'C', text: 'Share raw SIGINT with five allies — build a coalition response', effect: '+10 Alliances / −8 Source Protection', score: 8, outcome: { win: true, title: 'COALITION INTELLIGENCE BRIEF', body: 'Allies are aligned. A joint statement will be released within 48 hours. Downside: sharing the raw intercept exposed your collection method. That source is now burned.' } },
+            { key: 'D', text: 'Do nothing — insufficient evidence to act', effect: '+0 Risk / −20 Strategic Advantage', score: -8, outcome: { win: false, title: 'WINDOW MISSED', body: 'The facility resumed operations. Months later, confirmation arrived — you had the right intelligence and chose inaction. The reactor complex is now operational and fortified.' } },
+          ],
+          best: 'B',
+        },
+        {
+          headline: 'Economic Coup — The Kessler File',
+          tags: [{ label: 'FINANCIAL WARFARE', cls: 'yellow' }, { label: 'COVERT', cls: 'red' }],
+          desc: 'A foreign sovereign wealth fund has been quietly acquiring controlling stakes in critical infrastructure — ports, energy grids, telecommunications — across three allied nations. The operation is financially legal. The strategic implications are not. Minister Kessler is the back-channel. He\'s for sale.',
+          options: [
+            { key: 'A', text: 'Pay Kessler — acquire his cooperation and redirect the fund', effect: '+16 Economic Control / −12 Integrity', score: 10, outcome: { win: true, title: 'KESSLER TURNED', body: 'Kessler is yours. The fund\'s acquisitions are now subtly misdirected. Two critical assets have been steered away from enemy hands. The cost was significant — in every sense.' } },
+            { key: 'B', text: 'Expose Kessler publicly — force allied governments to act', effect: '+10 Transparency / −14 Deniability', score: 4, outcome: { win: false, title: 'CONTROLLED BURN', body: 'Kessler is finished. But the exposure spooked the fund — it went quiet, restructured, and now operates through three additional layers of shell entities. Harder to track.' } },
+            { key: 'C', text: 'Use economic leverage — orchestrate a counter-acquisition campaign', effect: '+20 Strategic Assets / −18 Resources', score: 18, outcome: { win: true, title: 'FINANCIAL COUNTERSTRIKE', body: 'Brilliant. A consortium of friendly capital sources quietly outbid the fund on two critical ports. The operation cost enormously but the strategic advantage is decisive.' } },
+            { key: 'D', text: 'Sanction the fund directly — apply maximum economic pressure', effect: '+8 Deterrence / −12 Trade Relations', score: 5, outcome: { win: true, title: 'PRESSURE APPLIED', body: 'Sanctions landed. The fund paused expansion. Allies are nervous about collateral impact on their own economies. A battle won, but the war continues at a higher temperature.' } },
+          ],
+          best: 'C',
+        },
+      ];
+
+      let crisisIndex = 0, score = 0, chosen = false;
+      const panel = document.getElementById('eq-crisis-panel');
+      const crisisBtn = document.getElementById('eq-crisis-btn');
+      const closeBtn = document.getElementById('eq-close-crisis');
+      const nextBtn = document.getElementById('eq-next-btn');
+
+      function openCrisis() {
+        loadCrisis(crisisIndex);
+        panel.classList.add('open');
+      }
+
+      function loadCrisis(idx) {
+        const c = CRISES[idx % CRISES.length];
+        chosen = false;
+        document.getElementById('eq-crisis-headline').textContent = c.headline;
+
+        // Tags
+        const bar = document.getElementById('eq-intel-bar');
+        bar.innerHTML = '';
+        c.tags.forEach(t => {
+          const chip = document.createElement('div');
+          chip.className = 'eq-intel-chip ' + t.cls;
+          chip.textContent = t.label;
+          bar.appendChild(chip);
+        });
+
+        document.getElementById('eq-crisis-desc').textContent = c.desc;
+
+        // Options
+        const optWrap = document.getElementById('eq-crisis-options');
+        optWrap.innerHTML = '';
+        c.options.forEach(opt => {
+          const div = document.createElement('div');
+          div.className = 'eq-crisis-opt';
+          div.innerHTML = `<div class="eq-opt-key">${opt.key}</div><div><div class="eq-opt-text">${opt.text}</div><div class="eq-opt-effect">${opt.effect}</div></div>`;
+          div.addEventListener('click', () => {
+            if (chosen) return;
+            chosen = true;
+            const outcome = opt.outcome;
+            div.classList.add(outcome.win ? 'chosen' : 'wrong');
+
+            score += opt.score;
+            document.getElementById('eq-score-val').textContent = score;
+
+            const outEl = document.getElementById('eq-outcome');
+            outEl.className = 'eq-outcome show' + (outcome.win ? '' : ' fail');
+            document.getElementById('eq-outcome-title').textContent = outcome.title;
+            document.getElementById('eq-outcome-body').textContent = outcome.body;
+
+            nextBtn.disabled = false;
+          });
+          optWrap.appendChild(div);
+        });
+
+        // Reset outcome
+        document.getElementById('eq-outcome').className = 'eq-outcome';
+        nextBtn.disabled = true;
+      }
+
+      crisisBtn.addEventListener('click', openCrisis);
+      closeBtn.addEventListener('click', () => panel.classList.remove('open'));
+      nextBtn.addEventListener('click', () => {
+        crisisIndex++;
+        loadCrisis(crisisIndex);
+      });
+
+      // Keyboard
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') panel.classList.remove('open');
+        if (!panel.classList.contains('open') || chosen) return;
+        const key = e.key.toUpperCase();
+        const opts = document.querySelectorAll('.eq-crisis-opt');
+        ['A','B','C','D'].forEach((k, i) => {
+          if (key === k && opts[i]) opts[i].click();
+        });
+      });
+
+      // ── 6. Ambient particle on click ───────────────────────────────────
+      document.addEventListener('click', e => {
+        for (let i = 0; i < 6; i++) {
+          const p = document.createElement('div');
+          p.style.cssText = `
+            position:fixed;left:${e.clientX}px;top:${e.clientY}px;
+            width:4px;height:4px;border-radius:50%;background:#00ffe0;
+            pointer-events:none;z-index:99990;transform:translate(-50%,-50%);
+          `;
+          document.body.appendChild(p);
+          const angle = (i / 6) * Math.PI * 2;
+          const dist = 30 + Math.random() * 30;
+          if (window.gsap) {
+            gsap.to(p, {
+              x: Math.cos(angle) * dist, y: Math.sin(angle) * dist,
+              opacity: 0, duration: 0.5 + Math.random() * 0.3,
+              ease: 'power2.out',
+              onComplete: () => p.remove(),
+            });
+          } else {
+            setTimeout(() => p.remove(), 600);
+          }
+        }
+      });
+
+    })();
+    </script>
   </body>
 </html>
