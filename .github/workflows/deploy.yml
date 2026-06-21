@@ -1,8 +1,8 @@
-name: Deploy Equinox Drift to GitHub Pages
+name: Deploy EQUINOX to GitHub Pages
 
 on:
   push:
-    branches: [main, gh-pages]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -21,15 +21,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout prebuilt site from gh-pages branch
+      - name: Checkout main
         uses: actions/checkout@v4
-        with:
-          ref: gh-pages
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload prebuilt artifact
+      - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
