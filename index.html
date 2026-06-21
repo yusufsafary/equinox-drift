@@ -624,6 +624,57 @@
     <link rel="stylesheet" crossorigin href="/assets/index-BQ34BD58.css">
   </head>
   <body>
+    <!-- EasyA Logo Injection -->
+    <style>
+      #easya-hero-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        margin-bottom: 20px;
+      }
+      #easya-hero-badge img {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+        border-radius: 12px;
+        display: block;
+      }
+      #easya-hero-badge span {
+        font-family: 'Inter', sans-serif;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        color: rgba(0, 255, 224, 0.55);
+        text-transform: uppercase;
+        margin-top: 6px;
+      }
+    </style>
+    <script>
+      (function injectEasyALogo() {
+        function tryInject() {
+          const root = document.getElementById('root');
+          if (!root || !root.children.length) {
+            setTimeout(tryInject, 200);
+            return;
+          }
+          const h1 = root.querySelector('h1');
+          if (!h1) {
+            setTimeout(tryInject, 200);
+            return;
+          }
+          if (document.getElementById('easya-hero-badge')) return;
+          const badge = document.createElement('div');
+          badge.id = 'easya-hero-badge';
+          badge.innerHTML = '<img src="/easya-logo.png" alt="EasyA Kickstart" /><span>EasyA Kickstart</span>';
+          h1.parentNode.insertBefore(badge, h1);
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', tryInject);
+        } else {
+          tryInject();
+        }
+      })();
+    </script>
     <div id="root"></div>
 
     <!-- Globe canvas (behind everything) -->
