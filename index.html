@@ -20,250 +20,350 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Enhancement: global layer styles (injected BEFORE app so z-index is respected) -->
     <style>
-      /* ── Cursor ── */
-      *, *::before, *::after { cursor: none !important; }
-      #eq-cursor {
-        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99999;
-        width: 12px; height: 12px; background: #00ffe0; border-radius: 50%;
-        transform: translate(-50%,-50%);
-        box-shadow: 0 0 12px #00ffe0, 0 0 30px rgba(0,255,224,0.4);
-        transition: width 0.15s, height 0.15s, background 0.15s;
-        mix-blend-mode: screen;
-      }
-      #eq-cursor.big { width: 32px; height: 32px; background: rgba(0,255,224,0.15); border: 1.5px solid #00ffe0; }
-      #eq-cursor-trail {
-        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99998;
-        width: 32px; height: 32px; border: 1px solid rgba(0,255,224,0.3); border-radius: 50%;
-        transform: translate(-50%,-50%);
-        transition: transform 0.12s ease-out, left 0.12s ease-out, top 0.12s ease-out;
+      /* ─────────────────────────────────────────────
+         LAYER ORDER (bottom → top)
+         0  #eq-bg-canvas   (Three.js globe)
+         1  #eq-scanlines / #eq-vignette
+         2  #root  ← React app sits HERE, above everything
+         3+ eq-ticker, eq-crisis-btn, eq-panels, eq-cursor
+         ───────────────────────────────────────────── */
+
+      /* Ensure React app is always above the canvas layers */
+      #root {
+        position: relative;
+        z-index: 2;
       }
 
       /* ── Three.js Background Canvas ── */
       #eq-bg-canvas {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         z-index: 0; pointer-events: none;
-        opacity: 0; transition: opacity 1.2s;
+        opacity: 0; transition: opacity 1.4s ease;
       }
       #eq-bg-canvas.visible { opacity: 1; }
 
-      /* ── Scanline overlay ── */
+      /* ── Scanlines + Vignette (above canvas, below #root) ── */
       #eq-scanlines {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         z-index: 1; pointer-events: none;
-        background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
-        animation: scanMove 8s linear infinite;
+        background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
       }
-      @keyframes scanMove { from { background-position: 0 0; } to { background-position: 0 100px; } }
-
-      /* ── Noise vignette ── */
       #eq-vignette {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         z-index: 1; pointer-events: none;
-        background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%);
+        background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.6) 100%);
       }
 
-      /* ── Crisis HUD trigger button ── */
-      #eq-crisis-btn {
-        position: fixed; bottom: 28px; right: 28px; z-index: 9000;
-        background: rgba(0,0,0,0.85); border: 1px solid #00ffe0;
-        color: #00ffe0; font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700;
-        letter-spacing: 0.12em; text-transform: uppercase;
-        padding: 10px 18px; cursor: pointer !important;
-        border-radius: 3px;
-        box-shadow: 0 0 16px rgba(0,255,224,0.25), inset 0 0 8px rgba(0,255,224,0.05);
-        animation: pulseBorder 2.4s ease-in-out infinite;
-        display: flex; align-items: center; gap: 8px;
-        backdrop-filter: blur(12px);
-        transition: transform 0.2s, box-shadow 0.2s;
+      /* ── Custom Cursor (desktop only) ── */
+      @media (hover: hover) and (pointer: fine) {
+        *, *::before, *::after { cursor: none !important; }
       }
-      #eq-crisis-btn:hover { transform: scale(1.04); box-shadow: 0 0 28px rgba(0,255,224,0.5); }
-      #eq-crisis-btn .dot {
-        width: 7px; height: 7px; border-radius: 50%; background: #ff4444;
-        box-shadow: 0 0 6px #ff4444; animation: blink 1s ease-in-out infinite;
+      #eq-cursor {
+        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99999;
+        width: 10px; height: 10px; background: #00ffe0; border-radius: 50%;
+        transform: translate(-50%,-50%);
+        box-shadow: 0 0 10px #00ffe0, 0 0 24px rgba(0,255,224,0.35);
+        transition: width 0.15s, height 0.15s, background 0.15s;
+        mix-blend-mode: screen;
+        display: none; /* shown by JS only on pointer-fine devices */
       }
-      @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-      @keyframes pulseBorder {
-        0%,100%{ box-shadow: 0 0 16px rgba(0,255,224,0.25), inset 0 0 8px rgba(0,255,224,0.05); }
-        50%{ box-shadow: 0 0 28px rgba(0,255,224,0.5), inset 0 0 14px rgba(0,255,224,0.1); }
+      #eq-cursor.active { display: block; }
+      #eq-cursor.big { width: 28px; height: 28px; background: rgba(0,255,224,0.12); border: 1.5px solid #00ffe0; }
+      #eq-cursor-trail {
+        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99998;
+        width: 28px; height: 28px; border: 1px solid rgba(0,255,224,0.25); border-radius: 50%;
+        transform: translate(-50%,-50%); display: none;
+        transition: left 0.1s ease-out, top 0.1s ease-out;
       }
+      #eq-cursor-trail.active { display: block; }
 
-      /* ── Crisis Room Panel ── */
-      #eq-crisis-panel {
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.88);
-        z-index: 9999; width: min(520px, 94vw); max-height: 90vh; overflow-y: auto;
-        background: rgba(4,8,16,0.97); border: 1px solid rgba(0,255,224,0.35);
-        border-radius: 4px; padding: 0;
-        box-shadow: 0 0 60px rgba(0,255,224,0.15), 0 0 120px rgba(0,0,0,0.8);
-        backdrop-filter: blur(24px);
-        opacity: 0; pointer-events: none;
-        transition: opacity 0.3s, transform 0.3s;
-        font-family: 'Inter', sans-serif;
-      }
-      #eq-crisis-panel.open { opacity: 1; pointer-events: auto; transform: translate(-50%,-50%) scale(1); }
-
-      .eq-panel-header {
-        padding: 18px 24px 14px;
-        border-bottom: 1px solid rgba(0,255,224,0.15);
-        display: flex; justify-content: space-between; align-items: flex-start;
-      }
-      .eq-panel-title {
-        font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 0.2em;
-        text-transform: uppercase; color: rgba(0,255,224,0.6); margin-bottom: 4px;
-      }
-      .eq-panel-headline {
-        font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700;
-        color: #fff; line-height: 1.2; max-width: 340px;
-      }
-      .eq-close-btn {
-        background: none; border: none; color: rgba(255,255,255,0.4); font-size: 20px;
-        cursor: pointer !important; line-height: 1; padding: 0; margin-left: 12px; flex-shrink: 0;
-        transition: color 0.2s;
-      }
-      .eq-close-btn:hover { color: #fff; }
-
-      .eq-panel-body { padding: 20px 24px 24px; }
-
-      .eq-intel-bar {
-        display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;
-      }
-      .eq-intel-chip {
-        font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
-        padding: 4px 10px; border-radius: 2px; font-family: 'Rajdhani', sans-serif; font-weight: 600;
-      }
-      .eq-intel-chip.red { background: rgba(255,68,68,0.15); color: #ff6666; border: 1px solid rgba(255,68,68,0.3); }
-      .eq-intel-chip.yellow { background: rgba(255,200,68,0.12); color: #ffc844; border: 1px solid rgba(255,200,68,0.25); }
-      .eq-intel-chip.blue { background: rgba(0,160,255,0.12); color: #44aaff; border: 1px solid rgba(0,160,255,0.25); }
-
-      .eq-crisis-desc {
-        font-size: 14px; line-height: 1.65; color: rgba(255,255,255,0.72);
-        margin-bottom: 22px; border-left: 2px solid rgba(0,255,224,0.25);
-        padding-left: 14px;
-      }
-
-      .eq-crisis-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-      .eq-crisis-opt {
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 3px; padding: 14px 16px; cursor: pointer !important;
-        transition: border-color 0.2s, background 0.2s;
-        display: flex; align-items: flex-start; gap: 14px;
-      }
-      .eq-crisis-opt:hover:not(.chosen) { border-color: rgba(0,255,224,0.4); background: rgba(0,255,224,0.04); }
-      .eq-crisis-opt.chosen { border-color: #00ffe0; background: rgba(0,255,224,0.08); }
-      .eq-crisis-opt.wrong { border-color: rgba(255,68,68,0.5); background: rgba(255,68,68,0.06); }
-      .eq-opt-key {
-        font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 0.1em;
-        color: rgba(0,255,224,0.6); font-weight: 700; white-space: nowrap; padding-top: 1px;
-      }
-      .eq-opt-text { font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.8); }
-      .eq-opt-effect {
-        font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 5px;
-        font-style: italic;
-      }
-
-      .eq-outcome {
-        display: none; background: rgba(0,255,224,0.06); border: 1px solid rgba(0,255,224,0.2);
-        border-radius: 3px; padding: 14px 16px; margin-bottom: 18px;
-      }
-      .eq-outcome.show { display: block; }
-      .eq-outcome.fail { background: rgba(255,68,68,0.06); border-color: rgba(255,68,68,0.25); }
-      .eq-outcome-title { font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:6px; }
-      .eq-outcome.show .eq-outcome-title { color:#00ffe0; }
-      .eq-outcome.fail .eq-outcome-title { color:#ff6666; }
-      .eq-outcome-body { font-size:13px; line-height:1.55; color:rgba(255,255,255,0.72); }
-
-      .eq-score-bar {
-        display: flex; align-items: center; justify-content: space-between;
-        border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;
-        margin-top: 4px;
-      }
-      .eq-score-label { font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:rgba(255,255,255,0.35); }
-      .eq-score-val { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; color:#00ffe0; }
-      .eq-next-btn {
-        background: rgba(0,255,224,0.1); border: 1px solid rgba(0,255,224,0.4); color:#00ffe0;
-        font-family:'Rajdhani',sans-serif; font-size:12px; letter-spacing:0.15em; text-transform:uppercase;
-        padding: 8px 18px; cursor: pointer !important; border-radius:2px;
-        transition: background 0.2s, box-shadow 0.2s;
-      }
-      .eq-next-btn:hover { background:rgba(0,255,224,0.2); box-shadow:0 0 14px rgba(0,255,224,0.25); }
-      .eq-next-btn:disabled { opacity:0.3; pointer-events:none; }
-
-      /* ── SIGINT ticker ── */
+      /* ── SIGINT Ticker (mobile-first) ── */
       #eq-ticker-wrap {
-        position: fixed; bottom: 0; left: 0; width: 100%; z-index: 8000; pointer-events: none;
-        background: rgba(0,0,0,0.75); border-top: 1px solid rgba(0,255,224,0.12);
-        backdrop-filter: blur(8px); overflow: hidden; height: 28px;
+        position: fixed; bottom: 0; left: 0; width: 100%; z-index: 9100;
+        pointer-events: none;
+        background: rgba(0,0,0,0.82); border-top: 1px solid rgba(0,255,224,0.15);
+        backdrop-filter: blur(8px); overflow: hidden; height: 26px;
         display: flex; align-items: center;
       }
       #eq-ticker-label {
-        font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.25em;
-        color:#00ffe0; padding: 0 14px; flex-shrink:0; text-transform:uppercase; opacity:0.8;
+        font-family:'Rajdhani',sans-serif; font-size: 9px; letter-spacing: 0.22em;
+        color: #00ffe0; padding: 0 10px; flex-shrink: 0; text-transform: uppercase; opacity: 0.85;
+        border-right: 1px solid rgba(0,255,224,0.2); height: 100%; display:flex; align-items:center;
       }
       #eq-ticker-track {
-        display: flex; align-items: center; animation: tickerScroll 36s linear infinite; white-space:nowrap;
+        display: flex; align-items: center;
+        animation: tickerScroll 42s linear infinite; white-space: nowrap;
       }
       .eq-tick-item {
-        font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.1em;
-        color:rgba(255,255,255,0.45); padding: 0 32px; text-transform:uppercase; flex-shrink:0;
+        font-family:'Rajdhani',sans-serif; font-size: 9px; letter-spacing: 0.1em;
+        color: rgba(255,255,255,0.42); padding: 0 28px; text-transform: uppercase; flex-shrink: 0;
       }
-      .eq-tick-item span { color:#ffc844; }
+      .eq-tick-item span { color: #ffc844; }
       @keyframes tickerScroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
 
-      /* ── Floating geopolitical hotspots ── */
+      /* ── Crisis Button (mobile-first) ── */
+      #eq-crisis-btn {
+        position: fixed; z-index: 9200;
+        /* Mobile: bottom center above ticker */
+        bottom: 36px; left: 50%; transform: translateX(-50%);
+        background: rgba(4,8,16,0.92); border: 1px solid #00ffe0;
+        color: #00ffe0; font-family:'Rajdhani',sans-serif; font-size: 12px; font-weight: 700;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        padding: 9px 20px; cursor: pointer;
+        border-radius: 3px;
+        box-shadow: 0 0 18px rgba(0,255,224,0.2), inset 0 0 8px rgba(0,255,224,0.04);
+        animation: pulseBorder 2.6s ease-in-out infinite;
+        display: flex; align-items: center; gap: 8px;
+        backdrop-filter: blur(14px);
+        transition: transform 0.2s, box-shadow 0.2s, left 0.2s, bottom 0.2s;
+        white-space: nowrap;
+      }
+      /* Desktop: move to bottom-right */
+      @media (min-width: 640px) {
+        #eq-crisis-btn { left: auto; right: 24px; bottom: 38px; transform: none; }
+      }
+      #eq-crisis-btn:hover { box-shadow: 0 0 30px rgba(0,255,224,0.45); }
+      #eq-crisis-btn .dot {
+        width: 6px; height: 6px; border-radius: 50%; background: #ff4444;
+        box-shadow: 0 0 6px #ff4444; animation: blink 1s ease-in-out infinite; flex-shrink:0;
+      }
+      @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+      @keyframes pulseBorder {
+        0%,100%{ box-shadow: 0 0 18px rgba(0,255,224,0.2), inset 0 0 8px rgba(0,255,224,0.04); }
+        50%{ box-shadow: 0 0 32px rgba(0,255,224,0.45), inset 0 0 14px rgba(0,255,224,0.1); }
+      }
+
+      /* ── Global Threat Level Panel ── */
+      #eq-threat-panel {
+        position: fixed; z-index: 9050;
+        /* Mobile: top bar */
+        top: 8px; left: 8px; right: 8px;
+        background: rgba(4,8,16,0.88);
+        border: 1px solid rgba(0,255,224,0.2); border-radius: 4px;
+        backdrop-filter: blur(16px);
+        padding: 8px 12px;
+        display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        box-shadow: 0 0 24px rgba(0,0,0,0.5);
+        transition: opacity 0.4s;
+      }
+      /* Desktop: fixed top-right compact column */
+      @media (min-width: 640px) {
+        #eq-threat-panel {
+          top: 16px; right: 16px; left: auto;
+          width: 200px; flex-direction: column; align-items: stretch; gap: 6px;
+          padding: 12px 14px;
+        }
+      }
+      .eq-threat-header {
+        font-family:'Rajdhani',sans-serif; font-size: 9px; letter-spacing: 0.22em;
+        text-transform: uppercase; color: rgba(0,255,224,0.55);
+        margin-bottom: 2px;
+        display: none; /* hide on mobile to save space */
+      }
+      @media (min-width: 640px) { .eq-threat-header { display: block; } }
+
+      .eq-threat-row {
+        display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+      }
+      @media (min-width: 640px) { .eq-threat-row { flex: none; } }
+      .eq-threat-label {
+        font-family:'Rajdhani',sans-serif; font-size: 9px; letter-spacing: 0.1em;
+        text-transform: uppercase; color: rgba(255,255,255,0.45);
+        width: 44px; flex-shrink: 0;
+      }
+      .eq-threat-bar-wrap {
+        flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden;
+      }
+      .eq-threat-bar {
+        height: 100%; border-radius: 2px;
+        transition: width 0.8s cubic-bezier(0.4,0,0.2,1), background 0.8s;
+      }
+      .eq-threat-val {
+        font-family:'Rajdhani',sans-serif; font-size: 11px; font-weight: 700;
+        width: 28px; text-align: right; flex-shrink: 0;
+      }
+
+      /* ── Crisis Room Panel (mobile-first) ── */
+      #eq-crisis-panel {
+        position: fixed; z-index: 9500;
+        /* Mobile: full bottom sheet */
+        bottom: 0; left: 0; right: 0; top: auto;
+        max-height: 88vh; border-radius: 12px 12px 0 0;
+        transform: translateY(100%);
+        /* Desktop: centered modal */
+        background: rgba(4,8,16,0.97);
+        border: 1px solid rgba(0,255,224,0.3);
+        overflow-y: auto;
+        box-shadow: 0 -4px 60px rgba(0,255,224,0.12), 0 0 120px rgba(0,0,0,0.8);
+        backdrop-filter: blur(24px);
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.3s, transform 0.35s cubic-bezier(0.32,0.72,0,1);
+        font-family:'Inter', sans-serif;
+      }
+      #eq-crisis-panel.open {
+        opacity: 1; pointer-events: auto; transform: translateY(0);
+      }
+      @media (min-width: 640px) {
+        #eq-crisis-panel {
+          bottom: auto; left: 50%; top: 50%;
+          transform: translate(-50%,-50%) scale(0.9);
+          border-radius: 6px;
+          width: min(520px, 94vw); max-height: 90vh;
+        }
+        #eq-crisis-panel.open {
+          transform: translate(-50%,-50%) scale(1);
+        }
+      }
+
+      /* Mobile drag handle */
+      #eq-drag-handle {
+        display: flex; justify-content: center; padding: 10px 0 4px;
+      }
+      #eq-drag-handle span {
+        width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2);
+      }
+      @media (min-width: 640px) { #eq-drag-handle { display: none; } }
+
+      .eq-panel-header {
+        padding: 14px 18px 12px;
+        border-bottom: 1px solid rgba(0,255,224,0.12);
+        display: flex; justify-content: space-between; align-items: flex-start;
+        position: sticky; top: 0; background: rgba(4,8,16,0.97); z-index: 1;
+      }
+      .eq-panel-title {
+        font-family:'Rajdhani',sans-serif; font-size: 10px; letter-spacing: 0.2em;
+        text-transform: uppercase; color: rgba(0,255,224,0.55); margin-bottom: 4px;
+      }
+      .eq-panel-headline {
+        font-family:'Rajdhani',sans-serif; font-size: clamp(16px, 4vw, 20px); font-weight: 700;
+        color: #fff; line-height: 1.2;
+      }
+      .eq-close-btn {
+        background: none; border: none; color: rgba(255,255,255,0.35); font-size: 20px;
+        cursor: pointer; line-height: 1; padding: 0; margin-left: 12px; flex-shrink: 0;
+        transition: color 0.2s; min-width: 32px; min-height: 32px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .eq-close-btn:hover { color: #fff; }
+
+      .eq-panel-body { padding: 16px 18px 24px; }
+
+      .eq-intel-bar { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+      .eq-intel-chip {
+        font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+        padding: 3px 8px; border-radius: 2px; font-family:'Rajdhani',sans-serif; font-weight: 600;
+      }
+      .eq-intel-chip.red { background:rgba(255,68,68,0.14); color:#ff6666; border:1px solid rgba(255,68,68,0.28); }
+      .eq-intel-chip.yellow { background:rgba(255,200,68,0.1); color:#ffc844; border:1px solid rgba(255,200,68,0.22); }
+      .eq-intel-chip.blue { background:rgba(0,160,255,0.1); color:#44aaff; border:1px solid rgba(0,160,255,0.22); }
+
+      .eq-crisis-desc {
+        font-size: clamp(12px,3vw,13px); line-height: 1.65; color: rgba(255,255,255,0.68);
+        margin-bottom: 18px; border-left: 2px solid rgba(0,255,224,0.22); padding-left: 12px;
+      }
+
+      .eq-crisis-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+      .eq-crisis-opt {
+        background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 3px; padding: 12px 14px; cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+        display: flex; align-items: flex-start; gap: 12px;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .eq-crisis-opt:hover:not(.chosen):not(.wrong) { border-color:rgba(0,255,224,0.35); background:rgba(0,255,224,0.04); }
+      .eq-crisis-opt:active:not(.chosen):not(.wrong) { background:rgba(0,255,224,0.06); }
+      .eq-crisis-opt.chosen { border-color:#00ffe0; background:rgba(0,255,224,0.07); }
+      .eq-crisis-opt.wrong { border-color:rgba(255,68,68,0.45); background:rgba(255,68,68,0.05); }
+      .eq-opt-key {
+        font-family:'Rajdhani',sans-serif; font-size: 11px; letter-spacing: 0.1em;
+        color: rgba(0,255,224,0.55); font-weight: 700; white-space: nowrap; padding-top: 1px; min-width: 14px;
+      }
+      .eq-opt-text { font-size: clamp(12px,3vw,13px); line-height: 1.5; color: rgba(255,255,255,0.78); }
+      .eq-opt-effect { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; font-style: italic; }
+
+      .eq-outcome {
+        display: none;
+        background: rgba(0,255,224,0.05); border: 1px solid rgba(0,255,224,0.18);
+        border-radius: 3px; padding: 12px 14px; margin-bottom: 14px;
+      }
+      .eq-outcome.show { display: block; }
+      .eq-outcome.fail { background:rgba(255,68,68,0.05); border-color:rgba(255,68,68,0.22); }
+      .eq-outcome-title { font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:6px; }
+      .eq-outcome.show .eq-outcome-title { color:#00ffe0; }
+      .eq-outcome.fail .eq-outcome-title { color:#ff6666; }
+      .eq-outcome-body { font-size:clamp(12px,3vw,13px); line-height:1.55; color:rgba(255,255,255,0.68); }
+
+      .eq-score-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        border-top: 1px solid rgba(255,255,255,0.07); padding-top: 14px; gap: 12px;
+      }
+      .eq-score-label { font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.3); }
+      .eq-score-val { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; color:#00ffe0; }
+      .eq-next-btn {
+        background:rgba(0,255,224,0.08); border:1px solid rgba(0,255,224,0.35); color:#00ffe0;
+        font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:0.15em; text-transform:uppercase;
+        padding: 9px 16px; cursor:pointer; border-radius:2px;
+        transition: background 0.2s, box-shadow 0.2s;
+        min-height: 40px;
+      }
+      .eq-next-btn:hover { background:rgba(0,255,224,0.18); box-shadow:0 0 14px rgba(0,255,224,0.22); }
+      .eq-next-btn:disabled { opacity:0.28; pointer-events:none; }
+
+      /* ── Floating hotspots (desktop only) ── */
       .eq-hotspot {
-        position: fixed; z-index: 7000; pointer-events: auto; cursor: pointer !important;
-        width: 10px; height: 10px; border-radius: 50%;
-        background: radial-gradient(circle, #ff4444, #ff000088);
-        box-shadow: 0 0 10px #ff4444, 0 0 24px rgba(255,68,68,0.4);
-        animation: hotspotPulse 2s ease-in-out infinite;
+        position: fixed; z-index: 9000; pointer-events: auto; cursor: pointer;
+        width: 9px; height: 9px; border-radius: 50%;
+        background: radial-gradient(circle, #ff5500, rgba(255,60,0,0.6));
+        box-shadow: 0 0 8px #ff4400, 0 0 20px rgba(255,68,0,0.3);
+        animation: hotspotPulse 2.2s ease-in-out infinite;
+        display: none;
       }
       .eq-hotspot::before {
-        content:''; position:absolute; top:50%;left:50%; transform:translate(-50%,-50%);
-        width:22px; height:22px; border-radius:50%; border:1px solid rgba(255,68,68,0.4);
-        animation: ringExpand 2s ease-out infinite;
+        content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+        width:20px; height:20px; border-radius:50%; border:1px solid rgba(255,80,0,0.35);
+        animation: ringExpand 2.2s ease-out infinite;
       }
       .eq-hotspot-tooltip {
-        position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
-        background: rgba(4,8,16,0.95); border: 1px solid rgba(255,68,68,0.4);
-        color: #fff; font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.1em;
-        text-transform:uppercase; padding: 5px 10px; white-space:nowrap; border-radius:2px;
+        position:absolute; bottom:18px; left:50%; transform:translateX(-50%);
+        background:rgba(4,8,16,0.96); border:1px solid rgba(255,68,0,0.35);
+        color:#fff; font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.1em;
+        text-transform:uppercase; padding:4px 9px; white-space:nowrap; border-radius:2px;
         opacity:0; transition:opacity 0.2s; pointer-events:none;
       }
       .eq-hotspot:hover .eq-hotspot-tooltip { opacity:1; }
-      @keyframes hotspotPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
-      @keyframes ringExpand { 0%{width:10px;height:10px;opacity:0.8} 100%{width:48px;height:48px;opacity:0} }
+      @media (min-width: 768px) { .eq-hotspot { display: block; } }
+      @keyframes hotspotPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.35)} }
+      @keyframes ringExpand { 0%{width:9px;height:9px;opacity:0.8} 100%{width:44px;height:44px;opacity:0} }
 
-      /* ── Scroll-reveal utility ── */
-      .eq-reveal { opacity:0; transform:translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+      /* ── Click particles ── */
+      .eq-particle {
+        position:fixed; pointer-events:none; z-index:99990;
+        width:4px; height:4px; border-radius:50%; background:#00ffe0;
+        transform:translate(-50%,-50%);
+      }
+
+      /* ── Scroll reveal ── */
+      .eq-reveal { opacity:0; transform:translateY(20px); transition:opacity 0.65s ease, transform 0.65s ease; }
       .eq-reveal.in { opacity:1; transform:translateY(0); }
 
-      /* ── Typewriter effect on h1/hero headings ── */
-      .eq-typed::after { content:'|'; animation:cursorBlink 0.7s ease-in-out infinite; color:#00ffe0; }
-      @keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-      /* ── Glitch effect ── */
+      /* ── Glitch ── */
+      .eq-glitch { position:relative; display:inline-block; }
+      .eq-glitch::before, .eq-glitch::after {
+        content:attr(data-text); position:absolute; top:0; left:0; width:100%; height:100%; opacity:0;
+      }
+      .eq-glitch.glitching::before { opacity:1; color:#0ff; animation:glitch1 0.14s steps(2) infinite; }
+      .eq-glitch.glitching::after { opacity:1; color:#f0f; animation:glitch2 0.14s steps(2) infinite; }
       @keyframes glitch1 {
         0%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,0)}
-        25%{clip-path:inset(70% 0 5% 0);transform:translate(3px,0)}
-        50%{clip-path:inset(40% 0 40% 0);transform:translate(-2px,0)}
-        75%{clip-path:inset(5% 0 80% 0);transform:translate(2px,0)}
+        50%{clip-path:inset(40% 0 40% 0);transform:translate(2px,0)}
         100%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,0)}
       }
       @keyframes glitch2 {
         0%{clip-path:inset(60% 0 20% 0);transform:translate(3px,0)}
-        25%{clip-path:inset(5% 0 70% 0);transform:translate(-3px,0)}
-        50%{clip-path:inset(40% 0 40% 0);transform:translate(2px,0)}
-        75%{clip-path:inset(80% 0 5% 0);transform:translate(-2px,0)}
+        50%{clip-path:inset(40% 0 40% 0);transform:translate(-2px,0)}
         100%{clip-path:inset(60% 0 20% 0);transform:translate(3px,0)}
       }
-      .eq-glitch { position:relative; display:inline-block; }
-      .eq-glitch::before, .eq-glitch::after {
-        content:attr(data-text); position:absolute; top:0; left:0; width:100%; height:100%;
-        opacity:0; transition:opacity 0s;
-      }
-      .eq-glitch.glitching::before { opacity:1; color:#0ff; animation:glitch1 0.15s steps(2) infinite; }
-      .eq-glitch.glitching::after { opacity:1; color:#f0f; animation:glitch2 0.15s steps(2) infinite; }
     </style>
 
     <!-- Original app assets (unchanged) -->
@@ -271,52 +371,78 @@
     <link rel="stylesheet" crossorigin href="/assets/index-BQ34BD58.css">
   </head>
   <body>
+    <!-- React app root -->
     <div id="root"></div>
 
-    <!-- Enhancement: Three.js Background Canvas -->
+    <!-- Layer 0: Three.js globe (behind everything) -->
     <canvas id="eq-bg-canvas"></canvas>
 
-    <!-- Enhancement: Scanlines + Vignette -->
+    <!-- Layer 1: atmosphere overlays -->
     <div id="eq-scanlines"></div>
     <div id="eq-vignette"></div>
 
-    <!-- Enhancement: Custom Cursor -->
+    <!-- Custom cursor (desktop) -->
     <div id="eq-cursor"></div>
     <div id="eq-cursor-trail"></div>
 
-    <!-- Enhancement: SIGINT Ticker -->
+    <!-- Global Threat Level Panel -->
+    <div id="eq-threat-panel">
+      <div class="eq-threat-header">GLOBAL THREAT INDEX</div>
+      <div class="eq-threat-row">
+        <div class="eq-threat-label">DIPLO</div>
+        <div class="eq-threat-bar-wrap"><div class="eq-threat-bar" id="bar-diplo" style="width:52%;"></div></div>
+        <div class="eq-threat-val" id="val-diplo">52</div>
+      </div>
+      <div class="eq-threat-row">
+        <div class="eq-threat-label">MILIT</div>
+        <div class="eq-threat-bar-wrap"><div class="eq-threat-bar" id="bar-milit" style="width:38%;"></div></div>
+        <div class="eq-threat-val" id="val-milit">38</div>
+      </div>
+      <div class="eq-threat-row">
+        <div class="eq-threat-label">ECON</div>
+        <div class="eq-threat-bar-wrap"><div class="eq-threat-bar" id="bar-econ" style="width:61%;"></div></div>
+        <div class="eq-threat-val" id="val-econ">61</div>
+      </div>
+      <div class="eq-threat-row">
+        <div class="eq-threat-label">INTEL</div>
+        <div class="eq-threat-bar-wrap"><div class="eq-threat-bar" id="bar-intel" style="width:44%;"></div></div>
+        <div class="eq-threat-val" id="val-intel">44</div>
+      </div>
+    </div>
+
+    <!-- SIGINT Ticker (above ticker) -->
     <div id="eq-ticker-wrap">
       <div id="eq-ticker-label">SIGINT</div>
       <div id="eq-ticker-track">
         <span class="eq-tick-item">OPERATION BLACKTHORN — <span>ACTIVE</span></span>
-        <span class="eq-tick-item">ARCTIC STATION GAMMA: Anomalous transmissions detected — <span>INVESTIGATING</span></span>
-        <span class="eq-tick-item">DIPLOMATIC CHANNEL LAMBDA compromised — <span>BREACH CONFIRMED</span></span>
-        <span class="eq-tick-item">ECONOMIC EMBARGO on NORDVIK extended 90 days — <span>AUTHORIZED</span></span>
-        <span class="eq-tick-item">CELL ZETA — <span>RADIO SILENCE</span> — 72hrs</span>
-        <span class="eq-tick-item">STRATEGIC RESERVE ALPHA: Mobilization order pending — <span>AWAITING</span></span>
+        <span class="eq-tick-item">ARCTIC GAMMA: Anomalous transmissions — <span>INVESTIGATING</span></span>
+        <span class="eq-tick-item">CHANNEL LAMBDA compromised — <span>BREACH CONFIRMED</span></span>
+        <span class="eq-tick-item">EMBARGO NORDVIK extended 90 days — <span>AUTHORIZED</span></span>
+        <span class="eq-tick-item">CELL ZETA: Radio silence 72h — <span>UNKNOWN</span></span>
+        <span class="eq-tick-item">RESERVE ALPHA: Mobilization pending — <span>AWAITING</span></span>
         <span class="eq-tick-item">OPERATION BLACKTHORN — <span>ACTIVE</span></span>
-        <span class="eq-tick-item">ARCTIC STATION GAMMA: Anomalous transmissions detected — <span>INVESTIGATING</span></span>
-        <span class="eq-tick-item">DIPLOMATIC CHANNEL LAMBDA compromised — <span>BREACH CONFIRMED</span></span>
-        <span class="eq-tick-item">ECONOMIC EMBARGO on NORDVIK extended 90 days — <span>AUTHORIZED</span></span>
-        <span class="eq-tick-item">CELL ZETA — <span>RADIO SILENCE</span> — 72hrs</span>
-        <span class="eq-tick-item">STRATEGIC RESERVE ALPHA: Mobilization order pending — <span>AWAITING</span></span>
+        <span class="eq-tick-item">ARCTIC GAMMA: Anomalous transmissions — <span>INVESTIGATING</span></span>
+        <span class="eq-tick-item">CHANNEL LAMBDA compromised — <span>BREACH CONFIRMED</span></span>
+        <span class="eq-tick-item">EMBARGO NORDVIK extended 90 days — <span>AUTHORIZED</span></span>
+        <span class="eq-tick-item">CELL ZETA: Radio silence 72h — <span>UNKNOWN</span></span>
+        <span class="eq-tick-item">RESERVE ALPHA: Mobilization pending — <span>AWAITING</span></span>
       </div>
     </div>
 
-    <!-- Enhancement: Crisis Room Button -->
-    <button id="eq-crisis-btn" title="Open Crisis Room">
-      <span class="dot"></span>
-      CRISIS ROOM
+    <!-- Crisis Room trigger button -->
+    <button id="eq-crisis-btn" aria-label="Open Crisis Room">
+      <span class="dot"></span>CRISIS ROOM
     </button>
 
-    <!-- Enhancement: Crisis Room Panel -->
-    <div id="eq-crisis-panel">
+    <!-- Crisis Room Panel -->
+    <div id="eq-crisis-panel" role="dialog" aria-modal="true" aria-labelledby="eq-crisis-headline">
+      <div id="eq-drag-handle"><span></span></div>
       <div class="eq-panel-header">
         <div>
           <div class="eq-panel-title">SECURE CHANNEL — EYES ONLY</div>
           <div class="eq-panel-headline" id="eq-crisis-headline">Loading...</div>
         </div>
-        <button class="eq-close-btn" id="eq-close-crisis">✕</button>
+        <button class="eq-close-btn" id="eq-close-crisis" aria-label="Close">✕</button>
       </div>
       <div class="eq-panel-body">
         <div class="eq-intel-bar" id="eq-intel-bar"></div>
@@ -336,7 +462,7 @@
       </div>
     </div>
 
-    <!-- Enhancement: Three.js + GSAP CDN -->
+    <!-- CDN Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -345,383 +471,348 @@
     (function() {
       'use strict';
 
-      // ── 1. Custom Cursor ──────────────────────────────────────────────
+      const isMobile = () => window.innerWidth < 640;
+      const isTouch = () => window.matchMedia('(hover: none)').matches;
+
+      // ── 1. Cursor (desktop/pointer only) ─────────────────────────────
       const cur = document.getElementById('eq-cursor');
       const curT = document.getElementById('eq-cursor-trail');
-      let mx = -100, my = -100;
-      document.addEventListener('mousemove', e => {
-        mx = e.clientX; my = e.clientY;
-        cur.style.left = mx + 'px'; cur.style.top = my + 'px';
-        setTimeout(() => { curT.style.left = mx+'px'; curT.style.top = my+'px'; }, 80);
-      });
-      document.addEventListener('mouseenter', e => {
-        const t = e.target;
-        if (t && (t.tagName === 'A' || t.tagName === 'BUTTON' || t.closest('button') || t.closest('a') || t.style.cursor === 'pointer')) {
-          cur.classList.add('big');
-        }
-      }, true);
-      document.addEventListener('mouseleave', e => { cur.classList.remove('big'); }, true);
+      if (!isTouch()) {
+        cur.classList.add('active');
+        curT.classList.add('active');
+        let mx = -200, my = -200;
+        document.addEventListener('mousemove', e => {
+          mx = e.clientX; my = e.clientY;
+          cur.style.left = mx + 'px'; cur.style.top = my + 'px';
+          setTimeout(() => { curT.style.left = mx+'px'; curT.style.top = my+'px'; }, 90);
+        });
+        document.addEventListener('mouseover', e => {
+          const t = e.target;
+          if (t && (t.tagName==='A'||t.tagName==='BUTTON'||t.onclick||getComputedStyle(t).cursor==='pointer')) cur.classList.add('big');
+          else cur.classList.remove('big');
+        });
+      }
 
-      // ── 2. Three.js Background ────────────────────────────────────────
+      // ── 2. Three.js Globe ────────────────────────────────────────────
       const canvas = document.getElementById('eq-bg-canvas');
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      const mobile = isMobile();
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
       renderer.setClearColor(0x000000, 0);
 
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-      camera.position.set(0, 0, 4.5);
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 200);
+      camera.position.set(0, 0, mobile ? 5.5 : 4.8);
 
-      // Globe
-      const globeGeo = new THREE.SphereGeometry(1.6, 64, 64);
+      // Globe body
+      const globeR = mobile ? 1.4 : 1.6;
+      const globeGeo = new THREE.SphereGeometry(globeR, mobile ? 32 : 64, mobile ? 32 : 64);
       const globeMat = new THREE.MeshPhongMaterial({
-        color: 0x000e1a,
-        emissive: 0x001f3f,
-        emissiveIntensity: 0.3,
-        wireframe: false,
-        transparent: true,
-        opacity: 0.85,
+        color: 0x000d18, emissive: 0x001633, emissiveIntensity: 0.25,
+        transparent: true, opacity: 0.75,
       });
       const globe = new THREE.Mesh(globeGeo, globeMat);
       scene.add(globe);
 
-      // Wireframe overlay
-      const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ffe0, wireframe: true, transparent: true, opacity: 0.06 });
-      const wireframe = new THREE.Mesh(new THREE.SphereGeometry(1.61, 32, 32), wireMat);
+      // Wireframe
+      const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ffe0, wireframe: true, transparent: true, opacity: 0.055 });
+      const wireframe = new THREE.Mesh(new THREE.SphereGeometry(globeR + 0.005, mobile ? 20 : 32, mobile ? 20 : 32), wireMat);
       scene.add(wireframe);
 
-      // Atmosphere glow
-      const atmGeo = new THREE.SphereGeometry(1.72, 32, 32);
+      // Atmosphere
       const atmMat = new THREE.MeshPhongMaterial({
-        color: 0x001833,
-        emissive: 0x003366,
-        emissiveIntensity: 0.8,
-        transparent: true,
-        opacity: 0.22,
-        side: THREE.BackSide,
+        color: 0x001833, emissive: 0x002244, emissiveIntensity: 0.7,
+        transparent: true, opacity: 0.18, side: THREE.BackSide,
       });
-      scene.add(new THREE.Mesh(atmGeo, atmMat));
+      scene.add(new THREE.Mesh(new THREE.SphereGeometry(globeR + 0.14, 24, 24), atmMat));
 
       // Lights
-      const amb = new THREE.AmbientLight(0x001133, 0.5);
-      scene.add(amb);
-      const dirLight = new THREE.DirectionalLight(0x00ffe0, 0.6);
-      dirLight.position.set(3, 2, 3);
-      scene.add(dirLight);
-      const redLight = new THREE.PointLight(0xff3300, 0.4, 8);
-      redLight.position.set(-3, -1, 2);
-      scene.add(redLight);
+      scene.add(new THREE.AmbientLight(0x001033, 0.5));
+      const dirL = new THREE.DirectionalLight(0x00ffe0, 0.55);
+      dirL.position.set(3, 2, 4); scene.add(dirL);
+      const redL = new THREE.PointLight(0xff2200, 0.35, 8);
+      redL.position.set(-3, -1, 2); scene.add(redL);
 
-      // Hotspot dots on globe surface
-      const hotspotPositions = [
-        new THREE.Vector3(0.6, 1.0, 1.1),
-        new THREE.Vector3(-1.2, 0.5, 0.9),
-        new THREE.Vector3(0.9, -0.7, 1.1),
-        new THREE.Vector3(-0.4, 1.3, 0.9),
-        new THREE.Vector3(1.3, 0.2, 0.8),
-        new THREE.Vector3(-0.8, -1.0, 1.1),
+      // Hotspot dots on globe
+      const dotPositions = [
+        new THREE.Vector3(0.6,1.0,1.1), new THREE.Vector3(-1.2,0.5,0.9),
+        new THREE.Vector3(0.9,-0.7,1.1), new THREE.Vector3(-0.4,1.3,0.9),
+        new THREE.Vector3(1.3,0.2,0.8), new THREE.Vector3(-0.8,-1.0,1.1),
       ];
       const dotMat = new THREE.MeshBasicMaterial({ color: 0xff3300 });
-      const dotGeo = new THREE.SphereGeometry(0.022, 8, 8);
-      hotspotPositions.forEach(pos => {
-        pos.normalize().multiplyScalar(1.63);
-        const dot = new THREE.Mesh(dotGeo, dotMat.clone());
-        dot.position.copy(pos);
-        scene.add(dot);
+      const dotGeo = new THREE.SphereGeometry(0.02, 6, 6);
+      dotPositions.forEach(p => {
+        p.normalize().multiplyScalar(globeR + 0.02);
+        const d = new THREE.Mesh(dotGeo, dotMat);
+        d.position.copy(p); scene.add(d);
       });
 
-      // Particle field
-      const particleCount = 1200;
-      const positions = new Float32Array(particleCount * 3);
-      for (let i = 0; i < particleCount; i++) {
-        const r = 2.5 + Math.random() * 8;
+      // Particles
+      const pCount = mobile ? 500 : 1100;
+      const pPos = new Float32Array(pCount * 3);
+      for (let i = 0; i < pCount; i++) {
+        const r = 2.2 + Math.random() * 7;
         const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        positions[i*3]   = r * Math.sin(phi) * Math.cos(theta);
-        positions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
-        positions[i*3+2] = r * Math.cos(phi);
+        const phi = Math.acos(2*Math.random()-1);
+        pPos[i*3]   = r*Math.sin(phi)*Math.cos(theta);
+        pPos[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+        pPos[i*3+2] = r*Math.cos(phi);
       }
-      const partGeo = new THREE.BufferGeometry();
-      partGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      const partMat = new THREE.PointsMaterial({ color: 0x00ffe0, size: 0.018, transparent: true, opacity: 0.55 });
-      scene.add(new THREE.Points(partGeo, partMat));
+      const pGeo = new THREE.BufferGeometry();
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+      scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0x00ffe0, size: 0.016, transparent: true, opacity: 0.45 })));
 
       // Orbit rings
-      function makeRing(radius, color, opacity) {
-        const geo = new THREE.RingGeometry(radius, radius + 0.004, 128);
-        const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide });
-        return new THREE.Mesh(geo, mat);
+      function makeRing(r, col, op) {
+        const g = new THREE.RingGeometry(r, r+0.004, 96);
+        const m = new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:op, side:THREE.DoubleSide });
+        return new THREE.Mesh(g, m);
       }
-      const ring1 = makeRing(1.9, 0x00ffe0, 0.2); ring1.rotation.x = Math.PI / 2.5;
-      const ring2 = makeRing(2.2, 0x0044ff, 0.12); ring2.rotation.x = Math.PI / 1.4; ring2.rotation.z = 0.4;
-      const ring3 = makeRing(2.5, 0xff2200, 0.08); ring3.rotation.x = Math.PI / 3; ring3.rotation.y = 1.0;
+      const ring1 = makeRing(globeR+0.32, 0x00ffe0, 0.18); ring1.rotation.x = Math.PI/2.5;
+      const ring2 = makeRing(globeR+0.62, 0x0044ff, 0.10); ring2.rotation.x = Math.PI/1.4; ring2.rotation.z = 0.4;
+      const ring3 = makeRing(globeR+0.92, 0xff2200, 0.07); ring3.rotation.x = Math.PI/3; ring3.rotation.y = 1.0;
       scene.add(ring1, ring2, ring3);
 
       // Resize
       function onResize() {
         const w = window.innerWidth, h = window.innerHeight;
-        camera.aspect = w / h; camera.updateProjectionMatrix();
+        camera.aspect = w/h; camera.updateProjectionMatrix();
         renderer.setSize(w, h);
       }
-      window.addEventListener('resize', onResize);
-      onResize();
+      window.addEventListener('resize', onResize); onResize();
 
-      // Mouse parallax
-      let targetX = 0, targetY = 0, currentX = 0, currentY = 0;
-      document.addEventListener('mousemove', e => {
-        targetX = (e.clientX / window.innerWidth - 0.5) * 0.3;
-        targetY = (e.clientY / window.innerHeight - 0.5) * 0.3;
-      });
-
-      // Animate
-      let frame = 0;
-      function animate() {
-        requestAnimationFrame(animate);
-        frame++;
-        currentX += (targetX - currentX) * 0.04;
-        currentY += (targetY - currentY) * 0.04;
-
-        globe.rotation.y += 0.0012;
-        wireframe.rotation.y += 0.0012;
-        ring1.rotation.z += 0.0018;
-        ring2.rotation.z -= 0.0012;
-        ring3.rotation.y += 0.0009;
-
-        // Subtle camera drift following mouse
-        camera.position.x = currentX * 0.6;
-        camera.position.y = -currentY * 0.6;
-        camera.lookAt(0, 0, 0);
-
-        // Hotspot pulse
-        dotMat.color.setHSL(0, 1, 0.5 + 0.2 * Math.sin(frame * 0.05));
-
-        renderer.render(scene, camera);
-      }
-      animate();
-
-      // Fade in canvas after brief delay
-      setTimeout(() => canvas.classList.add('visible'), 600);
-
-      // ── 3. GSAP ScrollTrigger on React content ────────────────────────
-      if (window.gsap && window.ScrollTrigger) {
-        gsap.registerPlugin(ScrollTrigger);
-
-        // Poll for React to render content
-        function applyScrollAnimations() {
-          const root = document.getElementById('root');
-          if (!root || !root.children.length) {
-            setTimeout(applyScrollAnimations, 300);
-            return;
-          }
-
-          // Apply to all section-like elements
-          const candidates = root.querySelectorAll('section, article, [class*="section"], [class*="card"], [class*="feature"], [class*="hero"], h1, h2, h3, p');
-          candidates.forEach((el, i) => {
-            el.classList.add('eq-reveal');
-            ScrollTrigger.create({
-              trigger: el,
-              start: 'top 88%',
-              onEnter: () => {
-                gsap.to(el, {
-                  opacity: 1, y: 0, duration: 0.65,
-                  delay: (i % 5) * 0.07,
-                  ease: 'power2.out',
-                  onStart: () => el.classList.add('in'),
-                });
-              },
-              once: true,
-            });
-          });
-
-          // Glitch effect on first h1
-          const h1 = root.querySelector('h1');
-          if (h1 && !h1.classList.contains('eq-glitch')) {
-            const txt = h1.textContent;
-            h1.classList.add('eq-glitch');
-            h1.setAttribute('data-text', txt);
-
-            // Periodic glitch
-            function triggerGlitch() {
-              h1.classList.add('glitching');
-              setTimeout(() => h1.classList.remove('glitching'), 200 + Math.random() * 120);
-              setTimeout(triggerGlitch, 4000 + Math.random() * 5000);
-            }
-            setTimeout(triggerGlitch, 2000);
-          }
-        }
-        applyScrollAnimations();
-
-        // Parallax on scroll for globe canvas
-        gsap.to('#eq-bg-canvas', {
-          yPercent: 20,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: 'body',
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: true,
-          },
+      // Parallax
+      let tX=0, tY=0, cX=0, cY=0;
+      if (!isTouch()) {
+        document.addEventListener('mousemove', e => {
+          tX = (e.clientX/window.innerWidth - 0.5) * 0.25;
+          tY = (e.clientY/window.innerHeight - 0.5) * 0.25;
+        });
+      } else {
+        // Gyro parallax on mobile
+        window.addEventListener('deviceorientation', e => {
+          if (e.gamma != null) { tX = e.gamma / 90 * 0.2; tY = e.beta / 90 * 0.15; }
         });
       }
 
-      // ── 4. Floating Hotspots on-screen ────────────────────────────────
+      let frame = 0;
+      function animate() {
+        requestAnimationFrame(animate); frame++;
+        cX += (tX-cX)*0.04; cY += (tY-cY)*0.04;
+        globe.rotation.y += 0.0010; wireframe.rotation.y += 0.0010;
+        ring1.rotation.z += 0.0016; ring2.rotation.z -= 0.0010; ring3.rotation.y += 0.0008;
+        camera.position.x = cX*0.5; camera.position.y = -cY*0.5;
+        camera.lookAt(0,0,0);
+        renderer.render(scene, camera);
+      }
+      animate();
+      setTimeout(() => canvas.classList.add('visible'), 500);
+
+      // ── 3. Global Threat State ────────────────────────────────────────
+      const threats = { diplo: 52, milit: 38, econ: 61, intel: 44 };
+
+      function threatColor(v) {
+        if (v >= 70) return '#ff4444';
+        if (v >= 50) return '#ffc844';
+        return '#00ffe0';
+      }
+
+      function updateThreatUI() {
+        Object.entries(threats).forEach(([key, val]) => {
+          const bar = document.getElementById('bar-' + key);
+          const valEl = document.getElementById('val-' + key);
+          if (bar) { bar.style.width = val + '%'; bar.style.background = threatColor(val); }
+          if (valEl) { valEl.textContent = val; valEl.style.color = threatColor(val); }
+        });
+      }
+      updateThreatUI();
+
+      function applyThreatEffect(optionKey, crisisIdx) {
+        // Each crisis option shifts threat axes differently
+        const effects = {
+          0: { A:{diplo:-4,intel:+8}, B:{intel:-10,milit:+5}, C:{intel:+6,diplo:-3}, D:{milit:+12,intel:+4} },
+          1: { A:{diplo:-8,intel:+6}, B:{intel:+14,milit:+2}, C:{diplo:-5,intel:+8}, D:{diplo:+4,milit:-8} },
+          2: { A:{econ:-6,intel:+10}, B:{diplo:+8,econ:-4}, C:{econ:+14,diplo:-6}, D:{econ:+4,diplo:-6} },
+        };
+        const e = (effects[crisisIdx % 3] || {})[optionKey] || {};
+        Object.entries(e).forEach(([k,v]) => {
+          threats[k] = Math.max(0, Math.min(100, threats[k] + v));
+        });
+        updateThreatUI();
+
+        // Globe accent color reacts to threat
+        const maxThreat = Math.max(...Object.values(threats));
+        if (maxThreat >= 70) {
+          redL.color.setHex(0xff1100); redL.intensity = 0.65;
+        } else {
+          redL.color.setHex(0xff2200); redL.intensity = 0.35;
+        }
+      }
+
+      // ── 4. GSAP Scroll animations on React content ───────────────────
+      if (window.gsap && window.ScrollTrigger) {
+        gsap.registerPlugin(ScrollTrigger);
+        function applyScrollAnims() {
+          const root = document.getElementById('root');
+          if (!root || !root.children.length) { setTimeout(applyScrollAnims, 300); return; }
+          const els = root.querySelectorAll('section, article, h1, h2, h3, [class*="card"], [class*="feature"], [class*="section"]');
+          els.forEach((el, i) => {
+            if (el.classList.contains('eq-reveal')) return;
+            el.classList.add('eq-reveal');
+            ScrollTrigger.create({
+              trigger: el, start: 'top 90%',
+              onEnter: () => gsap.to(el, { opacity:1, y:0, duration:0.6, delay:(i%4)*0.06, ease:'power2.out', onStart:()=>el.classList.add('in') }),
+              once: true,
+            });
+          });
+          // Glitch on first h1
+          const h1 = root.querySelector('h1');
+          if (h1 && !h1.classList.contains('eq-glitch')) {
+            h1.classList.add('eq-glitch'); h1.setAttribute('data-text', h1.textContent);
+            (function glitchLoop() {
+              h1.classList.add('glitching');
+              setTimeout(() => h1.classList.remove('glitching'), 180);
+              setTimeout(glitchLoop, 4500 + Math.random() * 4000);
+            })();
+          }
+        }
+        applyScrollAnims();
+        // Globe scroll parallax
+        gsap.to('#eq-bg-canvas', { yPercent:16, ease:'none', scrollTrigger:{ trigger:'body', start:'top top', end:'bottom bottom', scrub:true } });
+      }
+
+      // ── 5. Desktop hotspots ──────────────────────────────────────────
       const regions = [
-        { name: 'NORTH ATLANTIC PACT ZONE', x: 18, y: 22 },
-        { name: 'EASTERN BLOC BORDER', x: 72, y: 28 },
-        { name: 'CASPIAN OIL FIELDS', x: 60, y: 45 },
-        { name: 'STRAIT OF HORMUZ', x: 63, y: 60 },
+        { name:'NORTH ATLANTIC', x:18, y:24 }, { name:'EASTERN BLOC BORDER', x:74, y:30 },
+        { name:'CASPIAN FIELDS', x:62, y:48 }, { name:'STRAIT OF HORMUZ', x:65, y:63 },
       ];
       regions.forEach(r => {
         const hs = document.createElement('div');
         hs.className = 'eq-hotspot';
-        hs.style.left = r.x + 'vw';
-        hs.style.top = r.y + 'vh';
+        hs.style.left = r.x+'vw'; hs.style.top = r.y+'vh';
         const tip = document.createElement('div');
-        tip.className = 'eq-hotspot-tooltip';
-        tip.textContent = r.name;
+        tip.className = 'eq-hotspot-tooltip'; tip.textContent = r.name;
         hs.appendChild(tip);
         hs.addEventListener('click', () => openCrisis());
         document.body.appendChild(hs);
       });
 
-      // ── 5. Crisis Room Game ────────────────────────────────────────────
+      // ── 6. Crisis Room ───────────────────────────────────────────────
       const CRISES = [
         {
-          headline: 'Agent VEGA Has Gone Dark',
-          tags: [{ label: 'PRIORITY ALPHA', cls: 'red' }, { label: 'HUMAN INTELLIGENCE', cls: 'blue' }, { label: 'TIME-SENSITIVE', cls: 'yellow' }],
-          desc: 'Deep-cover asset VEGA — embedded within the Ministry of Interior — has missed three consecutive check-ins. Last transmission suggests imminent exposure. Enemy counterintelligence is closing in. Your next move will determine whether VEGA survives, and whether your network stays intact.',
-          options: [
-            { key: 'A', text: 'Activate emergency extraction — pull VEGA out tonight', effect: '+12 Agent Safety / −6 Network Exposure', score: 12, outcome: { win: true, title: 'EXTRACTION SUCCESSFUL', body: 'VEGA is out. Network integrity maintained. However, the empty slot has been noticed by ministry counterparts. Expect increased surveillance on your remaining assets.' } },
-            { key: 'B', text: 'Order VEGA to go to ground — wait 72 hours for a cold window', effect: '+3 Deniability / −15 Agent Risk', score: -4, outcome: { win: false, title: 'VEGA COMPROMISED', body: 'The wait was too long. VEGA was detained at 0340 hours. Compartmentalization held — your network is intact — but a valuable asset is burned. Power index drops.' } },
-            { key: 'C', text: 'Flood the zone — deploy counter-disinformation to burn the lead', effect: '+8 Confusion / −4 Resources', score: 8, outcome: { win: true, title: 'OPERATION SMOKEHOUSE — SUCCESS', body: 'Disinformation campaign worked. VEGA has a 6-hour window. Exfiltration team is moving. Cost: two burned communication lines and a considerable budget draw.' } },
-            { key: 'D', text: 'Sacrifice VEGA — protect the network at all costs', effect: '−20 Ethics / +18 Network Security', score: 3, outcome: { win: false, title: 'COLD CALCULUS', body: 'VEGA was abandoned. The network holds. But your handler corps now knows what you\'re capable of. Recruitment will be harder. Some costs can\'t be measured in power.' } },
+          headline:'Agent VEGA Has Gone Dark',
+          tags:[{l:'PRIORITY ALPHA',c:'red'},{l:'HUMINT',c:'blue'},{l:'TIME-SENSITIVE',c:'yellow'}],
+          desc:'Deep-cover asset VEGA — embedded within the Ministry of Interior — has missed three consecutive check-ins. Last transmission suggests imminent exposure. Your next move determines whether VEGA survives, and whether your network stays intact.',
+          options:[
+            {k:'A',t:'Activate emergency extraction — pull VEGA out tonight',e:'+12 Agent Safety / −6 Network Exposure',s:12,o:{w:true,t:'EXTRACTION SUCCESSFUL',b:'VEGA is out. Network integrity maintained. However, the empty slot has been noticed by ministry counterparts. Expect increased surveillance on remaining assets.'}},
+            {k:'B',t:'Order VEGA to go to ground — wait 72 hours for a cold window',e:'+3 Deniability / −15 Agent Risk',s:-4,o:{w:false,t:'VEGA COMPROMISED',b:'The wait was too long. VEGA was detained at 0340 hours. Compartmentalization held — network intact — but a valuable asset is burned.'}},
+            {k:'C',t:'Flood the zone — deploy counter-disinformation to buy time',e:'+8 Confusion / −4 Resources',s:8,o:{w:true,t:'OPERATION SMOKEHOUSE — SUCCESS',b:'Disinformation worked. VEGA has a 6-hour window. Cost: two burned communication lines and significant budget draw.'}},
+            {k:'D',t:'Sacrifice VEGA — protect the network at all costs',e:'−20 Ethics / +18 Network Security',s:3,o:{w:false,t:'COLD CALCULUS',b:"VEGA was abandoned. The network holds. But your handler corps now knows what you're capable of. Recruitment will be harder."}},
           ],
-          best: 'A',
         },
         {
-          headline: 'Nuclear Facility — Unscheduled Shutdown',
-          tags: [{ label: 'CRITICAL', cls: 'red' }, { label: 'TECHNICAL INTEL', cls: 'blue' }],
-          desc: 'Satellite imaging shows an unscheduled 48-hour shutdown at the Karev-7 reactor complex — a facility designated civilian. SIGINT intercepts suggest foreign technicians were brought in under diplomatic cover. Analysts are split: sabotage, development, or cover for something else entirely.',
-          options: [
-            { key: 'A', text: 'Trigger a diplomatic incident — demand IAEA access immediately', effect: '+14 Transparency / −10 Relations', score: 6, outcome: { win: true, title: 'INSPECTION GRANTED', body: 'Political pressure worked. IAEA access was reluctantly granted. The facility was clean — but the precedent is set. Your adversary now knows you\'re watching closely.' } },
-            { key: 'B', text: 'Insert a HUMINT asset into the facility under maintenance cover', effect: '+18 Intelligence / −12 Asset Risk', score: 14, outcome: { win: true, title: 'PAYLOAD CONFIRMED', body: 'Your asset confirmed covert enrichment activity. The intelligence is priceless. Your Security Council briefing tomorrow will reshape the alliance calculus.' } },
-            { key: 'C', text: 'Share raw SIGINT with five allies — build a coalition response', effect: '+10 Alliances / −8 Source Protection', score: 8, outcome: { win: true, title: 'COALITION INTELLIGENCE BRIEF', body: 'Allies are aligned. A joint statement will be released within 48 hours. Downside: sharing the raw intercept exposed your collection method. That source is now burned.' } },
-            { key: 'D', text: 'Do nothing — insufficient evidence to act', effect: '+0 Risk / −20 Strategic Advantage', score: -8, outcome: { win: false, title: 'WINDOW MISSED', body: 'The facility resumed operations. Months later, confirmation arrived — you had the right intelligence and chose inaction. The reactor complex is now operational and fortified.' } },
+          headline:'Karev-7 Reactor — Unscheduled Shutdown',
+          tags:[{l:'CRITICAL',c:'red'},{l:'TECHNICAL INTEL',c:'blue'}],
+          desc:'Satellite imaging shows an unscheduled 48-hour shutdown at Karev-7 — a civilian-designated facility. SIGINT intercepts suggest foreign technicians under diplomatic cover. Analysts are split: sabotage, covert development, or something else.',
+          options:[
+            {k:'A',t:'Demand IAEA access — trigger a diplomatic incident immediately',e:'+14 Transparency / −10 Relations',s:6,o:{w:true,t:'INSPECTION GRANTED',b:'Pressure worked. IAEA access was reluctantly granted. Clean — but the precedent is set. Adversary knows you are watching.'}},
+            {k:'B',t:'Insert HUMINT asset under maintenance cover',e:'+18 Intelligence / −12 Asset Risk',s:14,o:{w:true,t:'PAYLOAD CONFIRMED',b:'Your asset confirmed covert enrichment activity. The intelligence is priceless. Your Security Council briefing tomorrow reshapes the alliance calculus.'}},
+            {k:'C',t:'Share raw SIGINT with five allies — build a coalition response',e:'+10 Alliances / −8 Source Protection',s:8,o:{w:true,t:'COALITION INTEL BRIEF',b:'Allies aligned. Joint statement in 48 hours. Downside: sharing raw intercept exposed your collection method. That source is burned.'}},
+            {k:'D',t:'Do nothing — insufficient evidence to act',e:'+0 Risk / −20 Strategic Advantage',s:-8,o:{w:false,t:'WINDOW MISSED',b:'The facility resumed operations. Months later — confirmation. You had the right intelligence and chose inaction. The reactor is now operational and fortified.'}},
           ],
-          best: 'B',
         },
         {
-          headline: 'Economic Coup — The Kessler File',
-          tags: [{ label: 'FINANCIAL WARFARE', cls: 'yellow' }, { label: 'COVERT', cls: 'red' }],
-          desc: 'A foreign sovereign wealth fund has been quietly acquiring controlling stakes in critical infrastructure — ports, energy grids, telecommunications — across three allied nations. The operation is financially legal. The strategic implications are not. Minister Kessler is the back-channel. He\'s for sale.',
-          options: [
-            { key: 'A', text: 'Pay Kessler — acquire his cooperation and redirect the fund', effect: '+16 Economic Control / −12 Integrity', score: 10, outcome: { win: true, title: 'KESSLER TURNED', body: 'Kessler is yours. The fund\'s acquisitions are now subtly misdirected. Two critical assets have been steered away from enemy hands. The cost was significant — in every sense.' } },
-            { key: 'B', text: 'Expose Kessler publicly — force allied governments to act', effect: '+10 Transparency / −14 Deniability', score: 4, outcome: { win: false, title: 'CONTROLLED BURN', body: 'Kessler is finished. But the exposure spooked the fund — it went quiet, restructured, and now operates through three additional layers of shell entities. Harder to track.' } },
-            { key: 'C', text: 'Use economic leverage — orchestrate a counter-acquisition campaign', effect: '+20 Strategic Assets / −18 Resources', score: 18, outcome: { win: true, title: 'FINANCIAL COUNTERSTRIKE', body: 'Brilliant. A consortium of friendly capital sources quietly outbid the fund on two critical ports. The operation cost enormously but the strategic advantage is decisive.' } },
-            { key: 'D', text: 'Sanction the fund directly — apply maximum economic pressure', effect: '+8 Deterrence / −12 Trade Relations', score: 5, outcome: { win: true, title: 'PRESSURE APPLIED', body: 'Sanctions landed. The fund paused expansion. Allies are nervous about collateral impact on their own economies. A battle won, but the war continues at a higher temperature.' } },
+          headline:'The Kessler File — Economic Coup',
+          tags:[{l:'FINANCIAL WARFARE',c:'yellow'},{l:'COVERT',c:'red'}],
+          desc:"A foreign sovereign wealth fund is quietly acquiring controlling stakes in critical infrastructure across three allied nations — ports, energy grids, telecom. Legally clean. Strategically dangerous. Minister Kessler is the back-channel. He's for sale.",
+          options:[
+            {k:'A',t:'Pay Kessler — acquire his cooperation and redirect the fund',e:'+16 Economic Control / −12 Integrity',s:10,o:{w:true,t:"KESSLER TURNED",b:"Kessler is yours. Fund's acquisitions are now subtly misdirected. Two critical assets steered away from enemy hands."}},
+            {k:'B',t:'Expose Kessler publicly — force allied governments to act',e:'+10 Transparency / −14 Deniability',s:4,o:{w:false,t:'CONTROLLED BURN',b:'Kessler is finished. But the exposure spooked the fund — it went quiet, restructured, now operates through three more shell entities.'}},
+            {k:'C',t:'Orchestrate a counter-acquisition campaign via friendly capital',e:'+20 Strategic Assets / −18 Resources',s:18,o:{w:true,t:'FINANCIAL COUNTERSTRIKE',b:'Brilliant. Friendly capital quietly outbid the fund on two critical ports. The operation cost enormously but the strategic advantage is decisive.'}},
+            {k:'D',t:'Sanction the fund directly — apply maximum economic pressure',e:'+8 Deterrence / −12 Trade Relations',s:5,o:{w:true,t:'PRESSURE APPLIED',b:'Sanctions landed. Fund paused expansion. Allies nervous about collateral economic impact. A battle won, war continues at higher temperature.'}},
           ],
-          best: 'C',
         },
       ];
 
-      let crisisIndex = 0, score = 0, chosen = false;
+      let crisisIdx = 0, score = 0, chosen = false;
       const panel = document.getElementById('eq-crisis-panel');
-      const crisisBtn = document.getElementById('eq-crisis-btn');
-      const closeBtn = document.getElementById('eq-close-crisis');
-      const nextBtn = document.getElementById('eq-next-btn');
 
-      function openCrisis() {
-        loadCrisis(crisisIndex);
-        panel.classList.add('open');
-      }
+      function openCrisis() { loadCrisis(crisisIdx); panel.classList.add('open'); document.body.style.overflow='hidden'; }
+      function closeCrisis() { panel.classList.remove('open'); document.body.style.overflow=''; }
 
       function loadCrisis(idx) {
-        const c = CRISES[idx % CRISES.length];
-        chosen = false;
+        const c = CRISES[idx % CRISES.length]; chosen = false;
         document.getElementById('eq-crisis-headline').textContent = c.headline;
-
-        // Tags
         const bar = document.getElementById('eq-intel-bar');
         bar.innerHTML = '';
-        c.tags.forEach(t => {
-          const chip = document.createElement('div');
-          chip.className = 'eq-intel-chip ' + t.cls;
-          chip.textContent = t.label;
-          bar.appendChild(chip);
-        });
-
+        c.tags.forEach(t => { const ch=document.createElement('div'); ch.className='eq-intel-chip '+t.c; ch.textContent=t.l; bar.appendChild(ch); });
         document.getElementById('eq-crisis-desc').textContent = c.desc;
-
-        // Options
         const optWrap = document.getElementById('eq-crisis-options');
         optWrap.innerHTML = '';
         c.options.forEach(opt => {
-          const div = document.createElement('div');
-          div.className = 'eq-crisis-opt';
-          div.innerHTML = `<div class="eq-opt-key">${opt.key}</div><div><div class="eq-opt-text">${opt.text}</div><div class="eq-opt-effect">${opt.effect}</div></div>`;
-          div.addEventListener('click', () => {
-            if (chosen) return;
-            chosen = true;
-            const outcome = opt.outcome;
-            div.classList.add(outcome.win ? 'chosen' : 'wrong');
-
-            score += opt.score;
+          const d = document.createElement('div');
+          d.className = 'eq-crisis-opt'; d.setAttribute('role','button'); d.setAttribute('tabindex','0');
+          d.innerHTML = `<div class="eq-opt-key">${opt.k}</div><div><div class="eq-opt-text">${opt.t}</div><div class="eq-opt-effect">${opt.e}</div></div>`;
+          const pick = () => {
+            if (chosen) return; chosen = true;
+            d.classList.add(opt.o.w ? 'chosen' : 'wrong');
+            score += opt.s;
             document.getElementById('eq-score-val').textContent = score;
-
             const outEl = document.getElementById('eq-outcome');
-            outEl.className = 'eq-outcome show' + (outcome.win ? '' : ' fail');
-            document.getElementById('eq-outcome-title').textContent = outcome.title;
-            document.getElementById('eq-outcome-body').textContent = outcome.body;
-
-            nextBtn.disabled = false;
-          });
-          optWrap.appendChild(div);
+            outEl.className = 'eq-outcome show' + (opt.o.w ? '' : ' fail');
+            document.getElementById('eq-outcome-title').textContent = opt.o.t;
+            document.getElementById('eq-outcome-body').textContent = opt.o.b;
+            document.getElementById('eq-next-btn').disabled = false;
+            applyThreatEffect(opt.k, crisisIdx);
+            // Scroll to outcome on mobile
+            setTimeout(() => outEl.scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
+          };
+          d.addEventListener('click', pick);
+          d.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' ') pick(); });
+          optWrap.appendChild(d);
         });
-
-        // Reset outcome
         document.getElementById('eq-outcome').className = 'eq-outcome';
-        nextBtn.disabled = true;
+        document.getElementById('eq-next-btn').disabled = true;
       }
 
-      crisisBtn.addEventListener('click', openCrisis);
-      closeBtn.addEventListener('click', () => panel.classList.remove('open'));
-      nextBtn.addEventListener('click', () => {
-        crisisIndex++;
-        loadCrisis(crisisIndex);
-      });
+      document.getElementById('eq-crisis-btn').addEventListener('click', openCrisis);
+      document.getElementById('eq-close-crisis').addEventListener('click', closeCrisis);
+      document.getElementById('eq-next-btn').addEventListener('click', () => { crisisIdx++; loadCrisis(crisisIdx); });
 
-      // Keyboard
+      // Keyboard shortcuts
       document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') panel.classList.remove('open');
+        if (e.key === 'Escape') closeCrisis();
         if (!panel.classList.contains('open') || chosen) return;
-        const key = e.key.toUpperCase();
-        const opts = document.querySelectorAll('.eq-crisis-opt');
-        ['A','B','C','D'].forEach((k, i) => {
-          if (key === k && opts[i]) opts[i].click();
-        });
+        const k = e.key.toUpperCase();
+        if (['A','B','C','D'].includes(k)) {
+          const opts = document.querySelectorAll('.eq-crisis-opt');
+          const i = 'ABCD'.indexOf(k);
+          if (opts[i]) opts[i].click();
+        }
       });
 
-      // ── 6. Ambient particle on click ───────────────────────────────────
+      // Mobile swipe-down to close
+      let touchStartY = 0;
+      panel.addEventListener('touchstart', e => { touchStartY = e.touches[0].clientY; }, { passive: true });
+      panel.addEventListener('touchend', e => {
+        if (e.changedTouches[0].clientY - touchStartY > 80 && panel.scrollTop <= 0) closeCrisis();
+      }, { passive: true });
+
+      // ── 7. Click particles ───────────────────────────────────────────
       document.addEventListener('click', e => {
-        for (let i = 0; i < 6; i++) {
+        if (e.target.closest('#eq-crisis-panel')) return;
+        for (let i = 0; i < 5; i++) {
           const p = document.createElement('div');
-          p.style.cssText = `
-            position:fixed;left:${e.clientX}px;top:${e.clientY}px;
-            width:4px;height:4px;border-radius:50%;background:#00ffe0;
-            pointer-events:none;z-index:99990;transform:translate(-50%,-50%);
-          `;
+          p.className = 'eq-particle';
+          p.style.left = e.clientX+'px'; p.style.top = e.clientY+'px';
           document.body.appendChild(p);
-          const angle = (i / 6) * Math.PI * 2;
-          const dist = 30 + Math.random() * 30;
+          const angle = (i/5)*Math.PI*2, dist = 25+Math.random()*25;
+          const dx = Math.cos(angle)*dist, dy = Math.sin(angle)*dist;
           if (window.gsap) {
-            gsap.to(p, {
-              x: Math.cos(angle) * dist, y: Math.sin(angle) * dist,
-              opacity: 0, duration: 0.5 + Math.random() * 0.3,
-              ease: 'power2.out',
-              onComplete: () => p.remove(),
-            });
+            gsap.to(p, { x:dx, y:dy, opacity:0, duration:0.45+Math.random()*0.2, ease:'power2.out', onComplete:()=>p.remove() });
           } else {
-            setTimeout(() => p.remove(), 600);
+            setTimeout(()=>p.remove(), 500);
           }
         }
       });
