@@ -105,8 +105,8 @@
       /* ── Crisis Button (mobile-first) ── */
       #eq-crisis-btn {
         position: fixed; z-index: 9200;
-        /* Mobile: bottom center above ticker */
-        bottom: 36px; left: 50%; transform: translateX(-50%);
+        /* Mobile: bottom center, above threat strip (30px) + ticker (26px) */
+        bottom: 64px; left: 50%; transform: translateX(-50%);
         background: rgba(4,8,16,0.92); border: 1px solid #00ffe0;
         color: #00ffe0; font-family:'Rajdhani',sans-serif; font-size: 12px; font-weight: 700;
         letter-spacing: 0.14em; text-transform: uppercase;
@@ -137,29 +137,33 @@
       /* ── Global Threat Level Panel ── */
       #eq-threat-panel {
         position: fixed; z-index: 9050;
-        /* Mobile: top bar */
-        top: 8px; left: 8px; right: 8px;
-        background: rgba(4,8,16,0.88);
-        border: 1px solid rgba(0,255,224,0.2); border-radius: 4px;
-        backdrop-filter: blur(16px);
-        padding: 8px 12px;
-        display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-        box-shadow: 0 0 24px rgba(0,0,0,0.5);
+        /* Mobile: compact strip just above the SIGINT ticker (26px) */
+        bottom: 26px; left: 0; right: 0; top: auto;
+        background: rgba(4,8,16,0.9);
+        border-top: 1px solid rgba(0,255,224,0.15);
+        border-bottom: none; border-radius: 0;
+        backdrop-filter: blur(12px);
+        padding: 5px 12px;
+        display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; overflow: hidden;
+        box-shadow: none;
         transition: opacity 0.4s;
+        height: 30px;
       }
-      /* Desktop: fixed top-right compact column */
+      /* Desktop: compact column, top-right — well clear of any navbar */
       @media (min-width: 640px) {
         #eq-threat-panel {
-          top: 16px; right: 16px; left: auto;
-          width: 200px; flex-direction: column; align-items: stretch; gap: 6px;
-          padding: 12px 14px;
+          bottom: auto; left: auto; right: 16px; top: 80px;
+          width: 200px; height: auto; flex-direction: column; align-items: stretch;
+          gap: 6px; padding: 12px 14px; flex-wrap: wrap; overflow: visible;
+          border: 1px solid rgba(0,255,224,0.2); border-radius: 4px;
+          box-shadow: 0 0 24px rgba(0,0,0,0.5);
         }
       }
       .eq-threat-header {
         font-family:'Rajdhani',sans-serif; font-size: 9px; letter-spacing: 0.22em;
         text-transform: uppercase; color: rgba(0,255,224,0.55);
         margin-bottom: 2px;
-        display: none; /* hide on mobile to save space */
+        display: none;
       }
       @media (min-width: 640px) { .eq-threat-header { display: block; } }
 
