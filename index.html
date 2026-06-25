@@ -1,28 +1,852 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>EQUINOX - Grand Strategy Geopolitics</title>
-    <meta name="description" content="EQUINOX is a grand strategy geopolitics game. You don't play a soldier — you play the power behind governments. Control intelligence agencies, forge alliances, and decide the fate of the world." />
-    <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="EQUINOX" />
-    <meta property="og:description" content="A grand strategy geopolitics game where you command intelligence agencies, forge diplomatic alliances, and control economies." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://equinoxdrift.com/opengraph.png" />
-    <meta property="og:url" content="https://equinoxdrift.com" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="EQUINOX" />
-    <meta name="twitter:description" content="Grand strategy geopolitics — where intelligence wins wars." />
-    <meta name="twitter:image" content="https://equinoxdrift.com/opengraph.png" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-B808EA05.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BQ34BD58.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>EQUINOX — Grand Strategy Geopolitics</title>
+  <meta name="description" content="EQUINOX is a grand strategy geopolitics game. You don't play a soldier — you play the power behind governments. Control intelligence agencies, forge alliances, and decide the fate of the world." />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="EQUINOX" />
+  <meta property="og:description" content="A grand strategy geopolitics game where you command intelligence agencies, forge diplomatic alliances, and control economies." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://equinoxdrift.com/opengraph.png" />
+  <meta property="og:url" content="https://equinoxdrift.com" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="EQUINOX" />
+  <meta name="twitter:description" content="Grand strategy geopolitics — where intelligence wins wars." />
+  <meta name="twitter:image" content="https://equinoxdrift.com/opengraph.png" />
+  <meta name="ory-verify" content="orynth-a1b6c93c0bbb4b1fab00a59c43a2dfa0" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --fg: #0a0a0a;
+      --fg-muted: #6b7280;
+      --fg-subtle: #9ca3af;
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.14);
+      --dot-color: rgba(0,0,0,0.13);
+      --dot-size: 24px;
+      --accent: #0a0a0a;
+      --live: #16a34a;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── DOT GRID BACKGROUND ── */
+    .dot-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: var(--dot-size) var(--dot-size);
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 56px;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg);
+      text-decoration: none;
+    }
+
+    .nav-logo-icon {
+      width: 28px;
+      height: 28px;
+      border: 1.5px solid var(--fg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .nav-logo-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+    }
+
+    .nav-btn-ghost {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--fg-muted);
+    }
+
+    .nav-btn-ghost:hover {
+      color: var(--fg);
+      border-color: var(--border-strong);
+      background: rgba(0,0,0,0.04);
+    }
+
+    .nav-btn-solid {
+      background: var(--fg);
+      border: 1px solid var(--fg);
+      color: #fff;
+    }
+
+    .nav-btn-solid:hover {
+      background: #222;
+      border-color: #222;
+    }
+
+    /* ── MAIN ── */
+    main {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      padding: 120px 80px 100px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      position: relative;
+    }
+
+    .hero-content {
+      max-width: 680px;
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+      margin-bottom: 32px;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--live);
+      animation: livePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .hero-headline {
+      font-size: clamp(40px, 6vw, 82px);
+      font-weight: 800;
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+      color: var(--fg);
+      margin-bottom: 24px;
+    }
+
+    .hero-sub {
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.65;
+      color: var(--fg-muted);
+      max-width: 520px;
+      margin-bottom: 40px;
+    }
+
+    .hero-ctas {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .cta-primary {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 13px 28px;
+      background: var(--fg);
+      color: #fff;
+      border: 1.5px solid var(--fg);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .cta-primary:hover {
+      background: #1a1a1a;
+      transform: translateY(-1px);
+    }
+
+    .cta-secondary {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 13px 28px;
+      background: transparent;
+      color: var(--fg);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .cta-secondary:hover {
+      border-color: var(--fg);
+      background: rgba(0,0,0,0.03);
+    }
+
+    /* ── THREAT INDEX CARD ── */
+    .threat-card {
+      position: absolute;
+      right: 80px;
+      bottom: 80px;
+      background: #fff;
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 20px 24px;
+      min-width: 220px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .threat-card-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg-subtle);
+      margin-bottom: 14px;
+    }
+
+    .threat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+
+    .threat-row:last-child { margin-bottom: 0; }
+
+    .threat-name {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+      min-width: 40px;
+    }
+
+    .threat-bar-wrap {
+      flex: 1;
+      height: 3px;
+      background: rgba(0,0,0,0.08);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .threat-bar {
+      height: 100%;
+      background: var(--fg);
+      border-radius: 2px;
+      transition: width 1.2s ease;
+    }
+
+    .threat-val {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--fg);
+      min-width: 24px;
+      text-align: right;
+    }
+
+    /* ── NEWS CARD ── */
+    .news-card {
+      position: absolute;
+      right: 80px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #fff;
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 16px 18px;
+      max-width: 280px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .news-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .news-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      background: var(--fg);
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    .news-tag.intel { background: #374151; }
+    .news-tag.diplo { background: #1d4ed8; }
+    .news-tag.econ { background: #065f46; }
+
+    .news-time {
+      font-size: 11px;
+      color: var(--fg-subtle);
+    }
+
+    .news-title {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--fg);
+      margin-bottom: 8px;
+    }
+
+    .news-link {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .news-link:hover { color: var(--fg); }
+
+    /* ── SCROLL INDICATOR ── */
+    .scroll-indicator {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg-subtle);
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 32px;
+      background: linear-gradient(to bottom, transparent, var(--fg-subtle));
+      animation: scrollDown 1.8s ease-in-out infinite;
+    }
+
+    @keyframes scrollDown {
+      0% { transform: scaleY(0); transform-origin: top; }
+      50% { transform: scaleY(1); transform-origin: top; }
+      51% { transform: scaleY(1); transform-origin: bottom; }
+      100% { transform: scaleY(0); transform-origin: bottom; }
+    }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 50;
+      height: 32px;
+      background: var(--fg);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .ticker-label {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0 16px;
+      border-right: 1px solid rgba(255,255,255,0.12);
+      height: 100%;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .ticker-track {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker 38s linear infinite;
+    }
+
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    .ticker-item {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      padding: 0 28px;
+      color: rgba(255,255,255,0.72);
+    }
+
+    .ticker-item strong {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .ticker-sep {
+      color: rgba(255,255,255,0.2);
+      padding: 0 4px;
+    }
+
+    /* ── FEATURES SECTION ── */
+    .features {
+      position: relative;
+      z-index: 1;
+      padding: 100px 80px 80px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg-subtle);
+      margin-bottom: 48px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .feature-item {
+      background: #fff;
+      padding: 40px 36px;
+      transition: background 0.15s;
+    }
+
+    .feature-item:hover { background: #fafafa; }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .feature-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--fg);
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: var(--fg-muted);
+    }
+
+    /* ── CTA SECTION ── */
+    .cta-section {
+      position: relative;
+      z-index: 1;
+      padding: 80px;
+      max-width: 1440px;
+      margin: 0 auto 120px;
+      width: 100%;
+    }
+
+    .cta-box {
+      background: var(--fg);
+      border-radius: 16px;
+      padding: 72px 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+    }
+
+    .cta-box-headline {
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
+      max-width: 480px;
+      line-height: 1.1;
+    }
+
+    .cta-box-btn {
+      flex-shrink: 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 14px 32px;
+      background: #fff;
+      color: var(--fg);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .cta-box-btn:hover {
+      background: rgba(255,255,255,0.9);
+      transform: translateY(-1px);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 80px 60px;
+      border-top: 1px solid var(--border);
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .footer-logo {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--fg-subtle);
+    }
+
+    .footer-social {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-social a {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-social a:hover { color: var(--fg); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 20px; }
+      .hero { padding: 100px 24px 80px; flex-direction: column; }
+      .hero-content { max-width: 100%; }
+      .threat-card, .news-card { display: none; }
+      .features { padding: 60px 24px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .cta-section { padding: 24px; margin-bottom: 60px; }
+      .cta-box { flex-direction: column; padding: 48px 32px; text-align: center; }
+      footer { padding: 24px; }
+    }
+
+    /* ── ENTRANCE ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .live-badge { animation: fadeUp 0.5s ease both; animation-delay: 0.1s; opacity: 0; }
+    .hero-headline { animation: fadeUp 0.6s ease both; animation-delay: 0.2s; opacity: 0; }
+    .hero-sub { animation: fadeUp 0.6s ease both; animation-delay: 0.32s; opacity: 0; }
+    .hero-ctas { animation: fadeUp 0.6s ease both; animation-delay: 0.42s; opacity: 0; }
+    .news-card { animation: fadeUp 0.6s ease both; animation-delay: 0.5s; opacity: 0; }
+    .threat-card { animation: fadeUp 0.6s ease both; animation-delay: 0.62s; opacity: 0; }
+    .scroll-indicator { animation: fadeUp 0.6s ease both; animation-delay: 0.8s; opacity: 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Dot grid -->
+  <div class="dot-grid"></div>
+
+  <!-- Nav -->
+  <nav>
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-icon">
+        <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="7" cy="7" r="2.5" fill="#0a0a0a"/>
+          <circle cx="7" cy="1.5" r="1" fill="#0a0a0a"/>
+          <circle cx="7" cy="12.5" r="1" fill="#0a0a0a"/>
+          <circle cx="1.5" cy="7" r="1" fill="#0a0a0a"/>
+          <circle cx="12.5" cy="7" r="1" fill="#0a0a0a"/>
+        </svg>
+      </div>
+      Equinox
+    </a>
+    <div class="nav-right">
+      <a href="#" class="nav-btn nav-btn-ghost" onclick="openAuth(event,'signin')">Sign In</a>
+      <a href="#" class="nav-btn nav-btn-solid" onclick="openAuth(event,'signup')">Create Account</a>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="live-badge">
+          <span class="live-dot"></span>
+          Live · Real-time geopolitical strategy
+        </div>
+        <h1 class="hero-headline">Every nation<br>has a price.<br>Know yours.</h1>
+        <p class="hero-sub">
+          A grand strategy game where you command intelligence agencies, forge diplomatic alliances, control economies, and decide which nations rise and which collapse. The world map is your board. History is your weapon.
+        </p>
+        <div class="hero-ctas">
+          <a href="#" class="cta-primary">Play Demo</a>
+          <a href="#" class="cta-secondary">Watch Trailer</a>
+        </div>
+      </div>
+
+      <!-- News card (top right, like Varsko) -->
+      <div class="news-card">
+        <div class="news-meta">
+          <span class="news-tag intel">Intel</span>
+          <span class="news-time">4m ago</span>
+        </div>
+        <div class="news-title">Arctic Gamma: Anomalous transmissions detected — investigating</div>
+        <div class="news-link">
+          Open source
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 8L8 2M8 2H4M8 2V6" stroke="#9ca3af" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Threat Index card (bottom right) -->
+      <div class="threat-card">
+        <div class="threat-card-label">Global Threat Index</div>
+        <div class="threat-row">
+          <span class="threat-name">DIPLO</span>
+          <div class="threat-bar-wrap"><div class="threat-bar" style="width:52%"></div></div>
+          <span class="threat-val">52</span>
+        </div>
+        <div class="threat-row">
+          <span class="threat-name">MILIT</span>
+          <div class="threat-bar-wrap"><div class="threat-bar" style="width:30%"></div></div>
+          <span class="threat-val">30</span>
+        </div>
+        <div class="threat-row">
+          <span class="threat-name">FCON</span>
+          <div class="threat-bar-wrap"><div class="threat-bar" style="width:61%"></div></div>
+          <span class="threat-val">61</span>
+        </div>
+        <div class="threat-row">
+          <span class="threat-name">INTEL</span>
+          <div class="threat-bar-wrap"><div class="threat-bar" style="width:44%"></div></div>
+          <span class="threat-val">44</span>
+        </div>
+      </div>
+
+      <!-- Scroll indicator -->
+      <div class="scroll-indicator">
+        Scroll to explore
+        <div class="scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+      <div class="section-label">Capabilities</div>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="3" stroke="#0a0a0a" stroke-width="1.5"/>
+              <path d="M9 2v2M9 14v2M2 9h2M14 9h2" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="feature-title">Intelligence Networks</div>
+          <div class="feature-desc">Build and manage covert intelligence operations across every continent. Deploy agents, intercept signals, and shape the information landscape.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="2" width="6" height="6" rx="1.5" stroke="#0a0a0a" stroke-width="1.5"/>
+              <rect x="10" y="2" width="6" height="6" rx="1.5" stroke="#0a0a0a" stroke-width="1.5"/>
+              <rect x="2" y="10" width="6" height="6" rx="1.5" stroke="#0a0a0a" stroke-width="1.5"/>
+              <rect x="10" y="10" width="6" height="6" rx="1.5" stroke="#0a0a0a" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="feature-title">Diplomatic Alliances</div>
+          <div class="feature-desc">Forge or fracture alliances between world powers. Every treaty, sanction, and back-channel negotiation has consequences that ripple across the board.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M3 14l4-5 3 3 4-6" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="15" cy="5" r="1.5" fill="#0a0a0a"/>
+            </svg>
+          </div>
+          <div class="feature-title">Economic Warfare</div>
+          <div class="feature-desc">Control trade routes, currency markets, and resource flows. Collapse rival economies or build dependencies that make nations bow without a single shot fired.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+      <div class="cta-box">
+        <div class="cta-box-headline">You don't play a soldier. You play the power behind governments.</div>
+        <a href="#" class="cta-box-btn">Create Account</a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <span class="footer-logo">Equinox</span>
+      <span class="footer-copy">&copy; 2025 Equinox. All rights reserved.</span>
+      <div class="footer-social">
+        <a href="https://x.com/jomosblock" target="_blank">X / Twitter</a>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Ticker -->
+  <div class="ticker-wrap">
+    <span class="ticker-label">Sigint</span>
+    <div class="ticker-track" id="tickerTrack">
+      <span class="ticker-item"><strong>Technician IDs</strong> unverified <span class="ticker-sep">—</span> <strong>Flagged</strong></span>
+      <span class="ticker-item">Sovereign fund acquisition: ports 7, 9 <span class="ticker-sep">—</span> <strong>Monitor</strong></span>
+      <span class="ticker-item">Operation Blackthorn <span class="ticker-sep">—</span> <strong>Active</strong></span>
+      <span class="ticker-item">Arctic Gamma: Anomalous transmissions <span class="ticker-sep">—</span> <strong>Investigating</strong></span>
+      <span class="ticker-item">Channel Lambda compromised <span class="ticker-sep">—</span> <strong>Breach Confirmed</strong></span>
+      <span class="ticker-item">Embargo Nordvik extended 90 days <span class="ticker-sep">—</span> <strong>Authorized</strong></span>
+      <span class="ticker-item">Cell Zeta: Radio silence 70h <span class="ticker-sep">—</span> <strong>Unknown</strong></span>
+      <!-- duplicate for seamless loop -->
+      <span class="ticker-item"><strong>Technician IDs</strong> unverified <span class="ticker-sep">—</span> <strong>Flagged</strong></span>
+      <span class="ticker-item">Sovereign fund acquisition: ports 7, 9 <span class="ticker-sep">—</span> <strong>Monitor</strong></span>
+      <span class="ticker-item">Operation Blackthorn <span class="ticker-sep">—</span> <strong>Active</strong></span>
+      <span class="ticker-item">Arctic Gamma: Anomalous transmissions <span class="ticker-sep">—</span> <strong>Investigating</strong></span>
+      <span class="ticker-item">Channel Lambda compromised <span class="ticker-sep">—</span> <strong>Breach Confirmed</strong></span>
+      <span class="ticker-item">Embargo Nordvik extended 90 days <span class="ticker-sep">—</span> <strong>Authorized</strong></span>
+      <span class="ticker-item">Cell Zeta: Radio silence 70h <span class="ticker-sep">—</span> <strong>Unknown</strong></span>
+    </div>
+  </div>
+
+  <script>
+    // ── AUTH MODAL STUB ──
+    function openAuth(e, mode) {
+      if(e) e.preventDefault();
+      alert(mode === 'signin' ? 'Sign In — coming soon' : 'Create Account — coming soon');
+    }
+
+    // ── INTERACTIVE DOT GRID ──
+    (function() {
+      const grid = document.querySelector('.dot-grid');
+      let mx = -9999, my = -9999;
+      document.addEventListener('mousemove', e => {
+        mx = e.clientX; my = e.clientY;
+        grid.style.backgroundImage = `
+          radial-gradient(circle 120px at ${mx}px ${my}px, rgba(0,0,0,0.06) 0%, transparent 100%),
+          radial-gradient(circle, rgba(0,0,0,0.13) 1px, transparent 1px)
+        `;
+      });
+      document.addEventListener('mouseleave', () => {
+        grid.style.backgroundImage = `radial-gradient(circle, rgba(0,0,0,0.13) 1px, transparent 1px)`;
+      });
+    })();
+  </script>
+</body>
 </html>
