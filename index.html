@@ -640,6 +640,247 @@
       footer { padding: 24px; }
     }
 
+    /* ── HERO MAP CANVAS ── */
+    .hero-map {
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 52%;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeIn 1.2s ease both;
+      animation-delay: 0.6s;
+    }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .hero-map canvas { display: block; width: 100%; height: 100%; }
+
+    /* ── MODAL OVERLAY ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+    .modal-box {
+      background: #fff;
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 36px 36px 32px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.18);
+      transform: translateY(16px);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal-box { transform: translateY(0); }
+
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid var(--border); background: transparent;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--fg-muted); font-size: 18px; line-height: 1;
+      transition: all 0.15s;
+    }
+    .modal-close:hover { background: #f3f4f6; color: var(--fg); }
+
+    .modal-inner { position: relative; }
+
+    .modal-tabs {
+      display: flex; gap: 0;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 3px; margin-bottom: 28px;
+      background: #f9fafb;
+    }
+    .modal-tab {
+      flex: 1; font-family: 'Inter', sans-serif;
+      font-size: 13px; font-weight: 500;
+      padding: 8px 12px; border-radius: 6px;
+      border: none; cursor: pointer; background: transparent;
+      color: var(--fg-muted); transition: all 0.15s;
+    }
+    .modal-tab.active { background: #fff; color: var(--fg); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+    .modal-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--fg); margin-bottom: 24px;
+    }
+
+    .modal-title {
+      font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+      color: var(--fg); margin-bottom: 6px;
+    }
+    .modal-sub { font-size: 13px; color: var(--fg-muted); margin-bottom: 28px; }
+
+    .field-group { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+
+    .field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--fg-muted); margin-bottom: 6px; letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .field input {
+      width: 100%; font-family: 'Inter', sans-serif;
+      font-size: 14px; font-weight: 400;
+      padding: 11px 14px; border-radius: 8px;
+      border: 1.5px solid var(--border-strong);
+      background: #fff; color: var(--fg);
+      outline: none; transition: border-color 0.15s;
+    }
+    .field input:focus { border-color: var(--fg); }
+    .field input::placeholder { color: var(--fg-subtle); }
+
+    .btn-submit {
+      width: 100%; font-family: 'Inter', sans-serif;
+      font-size: 14px; font-weight: 600;
+      padding: 13px; border-radius: 8px;
+      background: var(--fg); color: #fff;
+      border: none; cursor: pointer;
+      transition: all 0.15s; letter-spacing: 0.02em;
+      margin-bottom: 16px;
+    }
+    .btn-submit:hover { background: #1a1a1a; transform: translateY(-1px); }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-submit.loading { opacity: 0.6; cursor: not-allowed; }
+
+    .modal-switch {
+      text-align: center; font-size: 13px; color: var(--fg-muted);
+    }
+    .modal-switch a {
+      color: var(--fg); font-weight: 600; cursor: pointer; text-decoration: underline;
+    }
+
+    .modal-success {
+      text-align: center; padding: 20px 0; display: none;
+    }
+    .modal-success-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: #f0fdf4; border: 1.5px solid #16a34a;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px; font-size: 24px;
+    }
+    .modal-success-title {
+      font-size: 20px; font-weight: 800; color: var(--fg);
+      margin-bottom: 8px; letter-spacing: -0.02em;
+    }
+    .modal-success-sub { font-size: 14px; color: var(--fg-muted); line-height: 1.5; }
+
+    /* ── DEMO MODAL ── */
+    .demo-overlay { align-items: flex-end; padding: 0; }
+    @media(min-width:600px) { .demo-overlay { align-items: center; padding: 20px; } }
+
+    .demo-box {
+      background: #0a0a0a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 640px;
+      padding: 32px 32px 40px;
+      box-shadow: 0 -24px 80px rgba(0,0,0,0.4);
+      transform: translateY(40px);
+      transition: transform 0.3s cubic-bezier(.16,1,.3,1);
+    }
+    @media(min-width:600px) {
+      .demo-box { border-radius: 20px; transform: translateY(24px); }
+    }
+    .demo-overlay.open .demo-box { transform: translateY(0); }
+
+    .demo-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .demo-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.02em; }
+    .demo-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); border: none;
+      color: rgba(255,255,255,0.6); font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .demo-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+    .demo-screen {
+      background: #111; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; height: 220px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; margin-bottom: 24px;
+      position: relative; overflow: hidden;
+    }
+    .demo-screen-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 30% 60%, rgba(30,60,30,0.5) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 30%, rgba(0,40,80,0.4) 0%, transparent 50%);
+    }
+    .demo-spinner {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+      position: relative; z-index: 1;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .demo-screen-label {
+      font-size: 13px; color: rgba(255,255,255,0.5);
+      position: relative; z-index: 1; letter-spacing: 0.06em;
+    }
+
+    .demo-features {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px;
+    }
+    .demo-feat {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px; padding: 12px 14px;
+    }
+    .demo-feat-title { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+    .demo-feat-sub { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+    .demo-cta-row {
+      display: flex; gap: 10px;
+    }
+    .demo-btn-primary {
+      flex: 1; font-family: 'Inter', sans-serif;
+      font-size: 14px; font-weight: 600;
+      padding: 13px; border-radius: 8px;
+      background: #fff; color: #0a0a0a;
+      border: none; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .demo-btn-primary:hover { background: #f0f0f0; }
+    .demo-btn-ghost {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px; font-weight: 500;
+      padding: 13px 20px; border-radius: 8px;
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .demo-btn-ghost:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+    /* ── IMPROVED MOBILE HERO ── */
+    @media (max-width: 900px) {
+      .hero {
+        min-height: 100svh;
+        padding: 88px 24px 100px;
+        justify-content: center;
+      }
+      .hero-map { display: none; }
+      .hero-headline { font-size: clamp(44px, 12vw, 64px); }
+      .hero-sub { font-size: 15px; }
+    }
+    @media (max-width: 480px) {
+      .hero-headline { font-size: 42px; line-height: 1.06; }
+      .cta-primary, .cta-secondary { width: 100%; text-align: center; display: block; }
+      .hero-ctas { flex-direction: column; }
+    }
+
     /* ── ENTRANCE ANIMATIONS ── */
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(24px); }
@@ -738,6 +979,11 @@
         </div>
       </div>
 
+      <!-- Animated world-map canvas -->
+      <div class="hero-map">
+        <canvas id="heroCanvas"></canvas>
+      </div>
+
       <!-- Scroll indicator -->
       <div class="scroll-indicator">
         Scroll to explore
@@ -802,6 +1048,108 @@
     </footer>
   </main>
 
+  <!-- ── AUTH MODAL ── -->
+  <div id="authModal" class="modal-overlay" onclick="if(event.target===this)closeModal('authModal')">
+    <div class="modal-box modal-inner">
+      <button class="modal-close" onclick="closeModal('authModal')">&#215;</button>
+      <div class="modal-logo">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="14" stroke="#0a0a0a" stroke-width="1.5"/>
+          <path d="M2 16 A14 14 0 0 1 30 16 Z" fill="#0a0a0a"/>
+          <line x1="2" y1="16" x2="30" y2="16" stroke="#0a0a0a" stroke-width="1.5"/>
+          <circle cx="16" cy="16" r="2.2" fill="#0a0a0a" stroke="#fff" stroke-width="1.5"/>
+        </svg>
+        Equinox
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tabSignin" onclick="switchTab('signin')">Sign In</button>
+        <button class="modal-tab" id="tabSignup" onclick="switchTab('signup')">Create Account</button>
+      </div>
+
+      <!-- Sign In -->
+      <div id="panelSignin">
+        <div class="modal-title">Welcome back</div>
+        <div class="modal-sub">Sign in to your Equinox command centre.</div>
+        <form class="field-group" onsubmit="submitAuth(event,'signin')">
+          <div class="field">
+            <label>Email</label>
+            <input type="email" placeholder="commander@equinox.io" required autocomplete="email"/>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" placeholder="••••••••" required autocomplete="current-password"/>
+          </div>
+          <button type="submit" class="btn-submit" id="submitSignin">Sign In</button>
+        </form>
+        <div class="modal-switch">No account? <a onclick="switchTab('signup')">Create one</a></div>
+      </div>
+
+      <!-- Sign Up -->
+      <div id="panelSignup" style="display:none">
+        <div class="modal-title">Join Equinox</div>
+        <div class="modal-sub">Create your command profile. The world awaits your orders.</div>
+        <form class="field-group" onsubmit="submitAuth(event,'signup')">
+          <div class="field">
+            <label>Commander Name</label>
+            <input type="text" placeholder="Your codename" required autocomplete="name"/>
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" placeholder="commander@equinox.io" required autocomplete="email"/>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" placeholder="Min. 8 characters" required minlength="8" autocomplete="new-password"/>
+          </div>
+          <button type="submit" class="btn-submit" id="submitSignup">Create Account</button>
+        </form>
+        <div class="modal-switch">Already have access? <a onclick="switchTab('signin')">Sign in</a></div>
+        <div id="signupSuccess" class="modal-success">
+          <div class="modal-success-icon">&#10003;</div>
+          <div class="modal-success-title">You're in, Commander.</div>
+          <div class="modal-success-sub">Account created. Full access coming soon — we'll notify you at launch.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DEMO MODAL ── -->
+  <div id="demoModal" class="modal-overlay demo-overlay" onclick="if(event.target===this)closeModal('demoModal')">
+    <div class="demo-box">
+      <div class="demo-header">
+        <div class="demo-title">Play Demo</div>
+        <button class="demo-close" onclick="closeModal('demoModal')">&#215;</button>
+      </div>
+      <div class="demo-screen" id="demoScreen">
+        <div class="demo-screen-bg"></div>
+        <div class="demo-spinner" id="demoSpinner"></div>
+        <div class="demo-screen-label" id="demoScreenLabel">Initialising world state…</div>
+      </div>
+      <div class="demo-features">
+        <div class="demo-feat">
+          <div class="demo-feat-title">Intelligence</div>
+          <div class="demo-feat-sub">Covert ops across 190+ nations</div>
+        </div>
+        <div class="demo-feat">
+          <div class="demo-feat-title">Diplomacy</div>
+          <div class="demo-feat-sub">Forge alliances, trigger sanctions</div>
+        </div>
+        <div class="demo-feat">
+          <div class="demo-feat-title">Economy</div>
+          <div class="demo-feat-sub">Control markets &amp; trade routes</div>
+        </div>
+        <div class="demo-feat">
+          <div class="demo-feat-title">Military</div>
+          <div class="demo-feat-sub">Proxy wars without fingerprints</div>
+        </div>
+      </div>
+      <div class="demo-cta-row">
+        <button class="demo-btn-primary" onclick="switchTab('signup');closeModal('demoModal');openModal('authModal')">Create Free Account</button>
+        <button class="demo-btn-ghost" onclick="closeModal('demoModal')">Maybe later</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Ticker -->
   <div class="ticker-wrap">
     <span class="ticker-label">Sigint</span>
@@ -825,26 +1173,228 @@
   </div>
 
   <script>
-    // ── AUTH MODAL STUB ──
+    // ── MODAL SYSTEM ──
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeModal('authModal');
+        closeModal('demoModal');
+      }
+    });
+
+    // ── AUTH ENTRY POINTS ──
     function openAuth(e, mode) {
-      if(e) e.preventDefault();
-      alert(mode === 'signin' ? 'Sign In — coming soon' : 'Create Account — coming soon');
+      if (e) e.preventDefault();
+      switchTab(mode === 'signup' ? 'signup' : 'signin');
+      openModal('authModal');
+    }
+
+    // ── TAB SWITCHER ──
+    function switchTab(mode) {
+      const isSignup = mode === 'signup';
+      document.getElementById('panelSignin').style.display = isSignup ? 'none' : '';
+      document.getElementById('panelSignup').style.display = isSignup ? '' : 'none';
+      document.getElementById('tabSignin').classList.toggle('active', !isSignup);
+      document.getElementById('tabSignup').classList.toggle('active', isSignup);
+    }
+
+    // ── FORM SUBMISSION ──
+    function submitAuth(e, mode) {
+      e.preventDefault();
+      const btn = mode === 'signin'
+        ? document.getElementById('submitSignin')
+        : document.getElementById('submitSignup');
+      btn.classList.add('loading');
+      btn.textContent = mode === 'signin' ? 'Signing in…' : 'Creating account…';
+      setTimeout(() => {
+        if (mode === 'signup') {
+          btn.closest('form').style.display = 'none';
+          document.querySelector('.modal-switch').style.display = 'none';
+          document.getElementById('signupSuccess').style.display = 'block';
+        } else {
+          btn.classList.remove('loading');
+          btn.textContent = 'Sign In';
+          closeModal('authModal');
+        }
+      }, 1400);
+    }
+
+    // ── WIRE UP FOOTER CTA + OTHER BUTTONS ──
+    document.querySelectorAll('.cta-box-btn').forEach(btn => {
+      btn.addEventListener('click', e => { e.preventDefault(); switchTab('signup'); openModal('authModal'); });
+    });
+    document.querySelector('.cta-primary').addEventListener('click', e => {
+      e.preventDefault(); openDemo();
+    });
+
+    // ── DEMO MODAL ──
+    function openDemo() {
+      openModal('demoModal');
+      const labels = [
+        'Initialising world state…',
+        'Loading intelligence networks…',
+        'Mapping diplomatic channels…',
+        'Calibrating threat index…',
+        'Demo ready — sign up to play'
+      ];
+      let i = 0;
+      const el = document.getElementById('demoScreenLabel');
+      const spinner = document.getElementById('demoSpinner');
+      const interval = setInterval(() => {
+        i++;
+        if (i < labels.length) { el.textContent = labels[i]; }
+        else {
+          clearInterval(interval);
+          spinner.style.display = 'none';
+          el.style.color = 'rgba(255,255,255,0.85)';
+          el.style.fontSize = '15px';
+          el.style.fontWeight = '600';
+        }
+      }, 900);
     }
 
     // ── INTERACTIVE DOT GRID ──
     (function() {
       const grid = document.querySelector('.dot-grid');
-      let mx = -9999, my = -9999;
       document.addEventListener('mousemove', e => {
-        mx = e.clientX; my = e.clientY;
         grid.style.backgroundImage = `
-          radial-gradient(circle 120px at ${mx}px ${my}px, rgba(0,0,0,0.06) 0%, transparent 100%),
+          radial-gradient(circle 180px at ${e.clientX}px ${e.clientY}px, rgba(0,0,0,0.055) 0%, transparent 100%),
           radial-gradient(circle, rgba(0,0,0,0.13) 1px, transparent 1px)
         `;
       });
       document.addEventListener('mouseleave', () => {
         grid.style.backgroundImage = `radial-gradient(circle, rgba(0,0,0,0.13) 1px, transparent 1px)`;
       });
+    })();
+
+    // ── HERO CANVAS: ANIMATED GEOPOLITICAL NETWORK ──
+    (function() {
+      const canvas = document.getElementById('heroCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      // Approximate dot positions of continents/capitals
+      const NODES_BASE = [
+        // North America
+        [0.18,0.22],[0.22,0.18],[0.12,0.28],[0.25,0.26],[0.20,0.32],[0.15,0.38],
+        // Europe
+        [0.48,0.20],[0.52,0.18],[0.55,0.22],[0.50,0.26],[0.53,0.28],[0.58,0.24],
+        [0.44,0.24],[0.46,0.28],
+        // Middle East / Africa
+        [0.56,0.34],[0.60,0.30],[0.52,0.38],[0.55,0.44],[0.50,0.50],[0.54,0.56],
+        [0.58,0.50],[0.52,0.62],[0.48,0.44],
+        // Asia
+        [0.68,0.18],[0.72,0.22],[0.76,0.26],[0.80,0.22],[0.84,0.28],[0.78,0.32],
+        [0.72,0.30],[0.68,0.36],[0.76,0.36],[0.82,0.36],[0.86,0.32],
+        // South America
+        [0.26,0.48],[0.28,0.54],[0.24,0.58],[0.30,0.60],[0.27,0.66],[0.22,0.62],
+        // Oceania
+        [0.82,0.56],[0.86,0.52],[0.84,0.60],[0.90,0.56],
+        // Russia/Central Asia
+        [0.62,0.16],[0.66,0.20],[0.70,0.16],[0.74,0.18],[0.64,0.26],[0.68,0.28],
+      ];
+
+      let nodes = [];
+      let W, H, raf;
+
+      function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        W = canvas.width = rect.width * devicePixelRatio;
+        H = canvas.height = rect.height * devicePixelRatio;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+        nodes = NODES_BASE.map(([rx, ry], i) => ({
+          x: rx * W, y: ry * H,
+          baseX: rx * W, baseY: ry * H,
+          r: (1.5 + Math.random() * 2) * devicePixelRatio,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.4 + Math.random() * 0.6,
+          drift: (Math.random() - 0.5) * 6 * devicePixelRatio,
+          pulse: 0, pulseDir: 1,
+          active: Math.random() > 0.5
+        }));
+      }
+
+      const CONNECT_DIST = 180 * devicePixelRatio;
+      let t = 0;
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        t += 0.008;
+
+        // Update nodes
+        nodes.forEach(n => {
+          n.x = n.baseX + Math.sin(t * n.speed + n.phase) * n.drift;
+          n.y = n.baseY + Math.cos(t * n.speed * 0.7 + n.phase) * n.drift * 0.6;
+          n.pulse += 0.04 * n.pulseDir;
+          if (n.pulse > 1 || n.pulse < 0) n.pulseDir *= -1;
+        });
+
+        // Connections
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i], b = nodes[j];
+            const dx = a.x - b.x, dy = a.y - b.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < CONNECT_DIST) {
+              const alpha = (1 - dist / CONNECT_DIST) * 0.18;
+              ctx.beginPath();
+              ctx.moveTo(a.x, a.y);
+              ctx.lineTo(b.x, b.y);
+              ctx.strokeStyle = `rgba(10,10,10,${alpha})`;
+              ctx.lineWidth = devicePixelRatio * 0.8;
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Nodes
+        nodes.forEach(n => {
+          const glow = n.r * (2 + n.pulse * 2);
+          // outer glow
+          const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glow);
+          grad.addColorStop(0, `rgba(10,10,10,${0.12 + n.pulse * 0.08})`);
+          grad.addColorStop(1, 'rgba(10,10,10,0)');
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, glow, 0, Math.PI * 2);
+          ctx.fillStyle = grad;
+          ctx.fill();
+          // core dot
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(10,10,10,${0.5 + n.pulse * 0.3})`;
+          ctx.fill();
+        });
+
+        // Travelling signal on a random edge every few frames
+        if (Math.floor(t * 40) % 12 === 0) {
+          const i = Math.floor(Math.random() * nodes.length);
+          const j = Math.floor(Math.random() * nodes.length);
+          if (i !== j) {
+            const a = nodes[i], b = nodes[j];
+            const frac = (t * 1.5) % 1;
+            const sx = a.x + (b.x - a.x) * frac;
+            const sy = a.y + (b.y - a.y) * frac;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 3 * devicePixelRatio, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(10,10,10,0.7)';
+            ctx.fill();
+          }
+        }
+
+        raf = requestAnimationFrame(draw);
+      }
+
+      resize();
+      window.addEventListener('resize', () => { cancelAnimationFrame(raf); resize(); draw(); });
+      draw();
     })();
   </script>
 </body>
