@@ -105,6 +105,32 @@
       gap: 8px;
     }
 
+    .nav-x-link {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      text-decoration: none;
+      padding: 6px 11px;
+      border-radius: 6px;
+      border: 1px solid var(--border-strong);
+      transition: all 0.15s;
+      letter-spacing: 0.01em;
+      margin-right: 4px;
+    }
+    .nav-x-link:hover {
+      color: var(--fg);
+      border-color: var(--fg);
+      background: rgba(0,0,0,0.03);
+    }
+    .nav-x-link svg { flex-shrink: 0; }
+    @media (max-width: 480px) {
+      .nav-x-link span { display: none; }
+      .nav-x-link { padding: 6px 9px; }
+    }
+
     .nav-btn {
       font-family: 'Inter', sans-serif;
       font-size: 13px;
@@ -915,6 +941,12 @@
       Equinox
     </a>
     <div class="nav-right">
+      <a href="https://x.com/equinoxdriftai" target="_blank" rel="noopener" class="nav-x-link">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622Zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        <span>@equinoxdriftai</span>
+      </a>
       <a href="#" class="nav-btn nav-btn-ghost" onclick="openAuth(event,'signin')">Sign In</a>
       <a href="#" class="nav-btn nav-btn-solid" onclick="openAuth(event,'signup')">Create Account</a>
     </div>
