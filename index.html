@@ -1,1537 +1,852 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>EQUINOX - Grand Strategy Geopolitics</title>
-    <meta name="description" content="EQUINOX is a grand strategy geopolitics game. You don't play a soldier — you play the power behind governments. Control intelligence agencies, forge alliances, and decide the fate of the world." />
-    <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="EQUINOX" />
-    <meta property="og:description" content="A grand strategy geopolitics game where you command intelligence agencies, forge diplomatic alliances, and control economies." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://equinoxdrift.com/opengraph.png" />
-    <meta property="og:url" content="https://equinoxdrift.com" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="EQUINOX" />
-    <meta name="twitter:description" content="Grand strategy geopolitics — where intelligence wins wars." />
-    <meta name="twitter:image" content="https://equinoxdrift.com/opengraph.png" />
-    <meta name="ory-verify" content="orynth-a1b6c93c0bbb4b1fab00a59c43a2dfa0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>EQUINOX — Grand Strategy Geopolitics</title>
+  <meta name="description" content="EQUINOX is a grand strategy geopolitics game. You don't play a soldier — you play the power behind governments. Control intelligence agencies, forge alliances, and decide the fate of the world." />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="EQUINOX" />
+  <meta property="og:description" content="A grand strategy geopolitics game where you command intelligence agencies, forge diplomatic alliances, and control economies." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://equinoxdrift.com/opengraph.png" />
+  <meta property="og:url" content="https://equinoxdrift.com" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="EQUINOX" />
+  <meta name="twitter:description" content="Grand strategy geopolitics — where intelligence wins wars." />
+  <meta name="twitter:image" content="https://equinoxdrift.com/opengraph.png" />
+  <meta name="ory-verify" content="orynth-a1b6c93c0bbb4b1fab00a59c43a2dfa0" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <style>
-      /* ═══════════════════════════════════════════════
-         LAYER STACK
-         0  #eq-bg-canvas   Three.js globe
-         1  #eq-scanlines / #eq-vignette
-         2  #root            React app
-         3  #eq-ticker-wrap  SIGINT ticker
-         4  #eq-threat-panel
-         5  #eq-topbar       Auth top bar
-         6  #eq-hotspots
-         7  #eq-crisis-btn
-         8  #eq-crisis-panel / #eq-dash-panel / #eq-auth-modal
-         9  #eq-cursor
-         ═══════════════════════════════════════════════ */
+    :root {
+      --bg: #ffffff;
+      --fg: #0a0a0a;
+      --fg-muted: #6b7280;
+      --fg-subtle: #9ca3af;
+      --border: rgba(0,0,0,0.08);
+      --border-strong: rgba(0,0,0,0.14);
+      --dot-color: rgba(0,0,0,0.13);
+      --dot-size: 24px;
+      --accent: #0a0a0a;
+      --live: #16a34a;
+    }
 
-      #root { position: relative; z-index: 2; }
+    html { scroll-behavior: smooth; }
 
-      /* ── Globe Canvas ── */
-      #eq-bg-canvas {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        z-index: 0; pointer-events: none;
-        opacity: 0; transition: opacity 1.4s;
-      }
-      #eq-bg-canvas.visible { opacity: 1; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-      #eq-scanlines {
-        position: fixed; inset: 0; z-index: 1; pointer-events: none;
-        background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.028) 2px, rgba(0,0,0,0.028) 4px);
-      }
-      #eq-vignette {
-        position: fixed; inset: 0; z-index: 1; pointer-events: none;
-        background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.62) 100%);
-      }
+    /* ── DOT GRID BACKGROUND ── */
+    .dot-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, var(--dot-color) 1px, transparent 1px);
+      background-size: var(--dot-size) var(--dot-size);
+    }
 
-      /* ── Cursor ── */
-      @media (hover: hover) and (pointer: fine) { *, *::before, *::after { cursor: none !important; } }
-      #eq-cursor {
-        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99999;
-        width: 10px; height: 10px; background: #00ffe0; border-radius: 50%;
-        transform: translate(-50%,-50%); display: none;
-        box-shadow: 0 0 10px #00ffe0, 0 0 22px rgba(0,255,224,0.3);
-        mix-blend-mode: screen; transition: width .14s, height .14s;
-      }
-      #eq-cursor.on { display: block; }
-      #eq-cursor.big { width: 28px; height: 28px; background: rgba(0,255,224,0.1); border: 1.5px solid #00ffe0; }
-      #eq-cursor-trail {
-        position: fixed; top: 0; left: 0; pointer-events: none; z-index: 99998;
-        width: 26px; height: 26px; border: 1px solid rgba(0,255,224,0.22); border-radius: 50%;
-        transform: translate(-50%,-50%); display: none;
-        transition: left .1s ease-out, top .1s ease-out;
-      }
-      #eq-cursor-trail.on { display: block; }
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 56px;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+    }
 
-      /* ── TOP AUTH BAR ── */
-      #eq-topbar {
-        position: fixed; top: 0; left: 0; right: 0; z-index: 8500;
-        height: 44px; background: rgba(2,5,12,0.92);
-        border-bottom: 1px solid rgba(0,255,224,0.1);
-        backdrop-filter: blur(16px);
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0 16px; gap: 12px;
-        pointer-events: auto;
-      }
-      .eq-topbar-logo {
-        font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700;
-        letter-spacing: 0.3em; color: #fff; text-transform: uppercase;
-        display: flex; align-items: center; gap: 8px;
-      }
-      .eq-topbar-logo::before {
-        content: ''; width: 6px; height: 6px; border-radius: 50%;
-        background: #00ffe0; box-shadow: 0 0 8px #00ffe0;
-        animation: logoPulse 2s ease-in-out infinite;
-      }
-      @keyframes logoPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-      .eq-topbar-right { display: flex; align-items: center; gap: 10px; }
-      .eq-topbar-btn {
-        font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 700;
-        letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer;
-        padding: 6px 14px; border-radius: 2px; border: none; transition: all .2s;
-        white-space: nowrap; min-height: 30px;
-      }
-      .eq-btn-login {
-        background: rgba(0,255,224,0.1); border: 1px solid rgba(0,255,224,0.4);
-        color: #00ffe0;
-      }
-      .eq-btn-login:hover { background: rgba(0,255,224,0.2); box-shadow: 0 0 14px rgba(0,255,224,0.25); }
-      .eq-btn-register {
-        background: rgba(0,255,224,0.85); color: #000a14;
-        border: 1px solid #00ffe0;
-      }
-      .eq-btn-register:hover { background: #00ffe0; box-shadow: 0 0 18px rgba(0,255,224,0.4); }
-      .eq-btn-dashboard {
-        background: rgba(0,255,224,0.1); border: 1px solid rgba(0,255,224,0.35);
-        color: #00ffe0; display: flex; align-items: center; gap: 7px;
-      }
-      .eq-btn-dashboard:hover { background: rgba(0,255,224,0.18); }
-      .eq-btn-logout {
-        background: none; border: 1px solid rgba(255,255,255,0.15);
-        color: rgba(255,255,255,0.45);
-      }
-      .eq-btn-logout:hover { border-color: rgba(255,80,80,0.5); color: #ff8080; }
-      .eq-user-rank {
-        font-family: 'Rajdhani', sans-serif; font-size: 9px; letter-spacing: 0.14em;
-        color: rgba(0,255,224,0.55); text-transform: uppercase; display: none;
-      }
-      @media (min-width: 480px) { .eq-user-rank { display: block; } }
-      .eq-user-name {
-        font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700;
-        letter-spacing: 0.12em; color: #fff; text-transform: uppercase;
-      }
-      #eq-auth-logged-out { display: flex; align-items: center; gap: 8px; }
-      #eq-auth-logged-in { display: none; align-items: center; gap: 10px; }
-      #eq-auth-logged-in.show { display: flex; }
-      #eq-auth-logged-out.hide { display: none; }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg);
+      text-decoration: none;
+    }
 
-      /* ── AUTH MODAL ── */
-      #eq-auth-modal {
-        position: fixed; inset: 0; z-index: 9800;
-        background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
-        display: flex; align-items: center; justify-content: center;
-        opacity: 0; pointer-events: none; transition: opacity .3s;
-        padding: 16px;
-      }
-      #eq-auth-modal.open { opacity: 1; pointer-events: auto; }
-      .eq-auth-card {
-        background: rgba(4,8,18,0.98); border: 1px solid rgba(0,255,224,0.25);
-        border-radius: 6px; width: 100%; max-width: 400px;
-        box-shadow: 0 0 80px rgba(0,255,224,0.1), 0 0 140px rgba(0,0,0,0.9);
-        overflow: hidden;
-        transform: translateY(12px) scale(0.97);
-        transition: transform .3s ease;
-      }
-      #eq-auth-modal.open .eq-auth-card { transform: translateY(0) scale(1); }
-      .eq-auth-header {
-        padding: 28px 28px 0;
-        text-align: center;
-      }
-      .eq-auth-emblem {
-        width: 48px; height: 48px; margin: 0 auto 16px;
-        border: 1.5px solid rgba(0,255,224,0.4); border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        position: relative;
-        box-shadow: 0 0 20px rgba(0,255,224,0.15), inset 0 0 12px rgba(0,255,224,0.05);
-      }
-      .eq-auth-emblem svg { width: 22px; height: 22px; }
-      .eq-auth-emblem::before {
-        content: ''; position: absolute; inset: -6px; border-radius: 50%;
-        border: 1px solid rgba(0,255,224,0.15); animation: rotateRing 8s linear infinite;
-      }
-      @keyframes rotateRing { from{transform:rotate(0)} to{transform:rotate(360deg)} }
-      .eq-auth-pretitle {
-        font-family: 'Rajdhani', sans-serif; font-size: 9px; letter-spacing: 0.28em;
-        color: rgba(0,255,224,0.5); text-transform: uppercase; margin-bottom: 6px;
-      }
-      .eq-auth-title {
-        font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700;
-        color: #fff; letter-spacing: 0.06em; margin-bottom: 4px;
-      }
-      .eq-auth-sub {
-        font-size: 12px; color: rgba(255,255,255,0.38); line-height: 1.5; margin-bottom: 0;
-      }
-      /* Tabs */
-      .eq-auth-tabs {
-        display: flex; margin: 20px 28px 0; border-bottom: 1px solid rgba(255,255,255,0.08);
-      }
-      .eq-auth-tab {
-        flex: 1; padding: 10px; text-align: center; cursor: pointer;
-        font-family: 'Rajdhani', sans-serif; font-size: 11px; letter-spacing: 0.16em;
-        text-transform: uppercase; color: rgba(255,255,255,0.38);
-        border-bottom: 2px solid transparent; transition: all .2s; margin-bottom: -1px;
-      }
-      .eq-auth-tab.active { color: #00ffe0; border-bottom-color: #00ffe0; }
-      /* Form */
-      .eq-auth-body { padding: 22px 28px 28px; }
-      .eq-auth-field { margin-bottom: 14px; }
-      .eq-auth-label {
-        display: block; font-family: 'Rajdhani', sans-serif; font-size: 10px;
-        letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.4);
-        margin-bottom: 6px;
-      }
-      .eq-auth-input {
-        width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 3px; padding: 11px 14px; color: #fff;
-        font-family: 'Inter', sans-serif; font-size: 14px;
-        outline: none; transition: border-color .2s, box-shadow .2s;
-        box-sizing: border-box; -webkit-appearance: none;
-        letter-spacing: 0.02em;
-      }
-      .eq-auth-input::placeholder { color: rgba(255,255,255,0.2); }
-      .eq-auth-input:focus { border-color: rgba(0,255,224,0.5); box-shadow: 0 0 0 3px rgba(0,255,224,0.06); }
-      .eq-auth-error {
-        font-size: 11px; color: #ff6666; margin-top: -8px; margin-bottom: 12px;
-        display: none; padding: 0 2px;
-      }
-      .eq-auth-error.show { display: block; }
-      .eq-auth-submit {
-        width: 100%; background: rgba(0,255,224,0.9); color: #000a14;
-        font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700;
-        letter-spacing: 0.2em; text-transform: uppercase;
-        padding: 13px; border: none; border-radius: 3px; cursor: pointer;
-        transition: background .2s, box-shadow .2s; margin-top: 6px;
-        min-height: 44px;
-      }
-      .eq-auth-submit:hover { background: #00ffe0; box-shadow: 0 0 22px rgba(0,255,224,0.35); }
-      .eq-auth-submit:active { transform: scale(0.99); }
-      .eq-auth-footer {
-        text-align: center; margin-top: 16px;
-        font-size: 11px; color: rgba(255,255,255,0.28); line-height: 1.5;
-      }
-      .eq-auth-footer span { color: rgba(0,255,224,0.6); }
+    .nav-logo-icon {
+      width: 28px;
+      height: 28px;
+      border: 1.5px solid var(--fg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-      /* ── COMMANDER DASHBOARD ── */
-      #eq-dash-panel {
-        position: fixed; inset: 0; z-index: 9700;
-        background: rgba(2,5,12,0.98);
-        backdrop-filter: blur(20px);
-        display: flex; flex-direction: column;
-        opacity: 0; pointer-events: none;
-        transform: translateX(100%);
-        transition: opacity .35s, transform .35s cubic-bezier(0.32,0.72,0,1);
-        overflow-y: auto;
-      }
-      #eq-dash-panel.open { opacity: 1; pointer-events: auto; transform: translateX(0); }
-      @media (min-width: 768px) {
-        #eq-dash-panel {
-          left: auto; width: min(680px, 95vw);
-          border-left: 1px solid rgba(0,255,224,0.15);
-          box-shadow: -40px 0 80px rgba(0,0,0,0.8);
-        }
-      }
-      .eq-dash-topbar {
-        position: sticky; top: 0; background: rgba(2,5,12,0.97);
-        border-bottom: 1px solid rgba(0,255,224,0.1); z-index: 1;
-        padding: 14px 20px; display: flex; align-items: center; justify-content: space-between;
-      }
-      .eq-dash-title {
-        font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing: 0.28em;
-        text-transform: uppercase; color: rgba(0,255,224,0.55);
-      }
-      .eq-dash-close {
-        background: none; border: none; color: rgba(255,255,255,0.35);
-        font-size: 18px; cursor: pointer; padding: 4px 8px; transition: color .2s; line-height:1;
-      }
-      .eq-dash-close:hover { color: #fff; }
-      .eq-dash-body { padding: 20px; flex: 1; }
+    .nav-logo-icon svg {
+      width: 14px;
+      height: 14px;
+    }
 
-      /* Commander Card */
-      .eq-commander-card {
-        background: rgba(0,255,224,0.04); border: 1px solid rgba(0,255,224,0.15);
-        border-radius: 6px; padding: 20px; margin-bottom: 20px;
-        display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-      }
-      .eq-commander-avatar {
-        width: 60px; height: 60px; flex-shrink: 0;
-        border: 2px solid rgba(0,255,224,0.4); border-radius: 50%;
-        background: rgba(0,255,224,0.08);
-        display: flex; align-items: center; justify-content: center;
-        font-family: 'Rajdhani', sans-serif; font-size: 24px; font-weight: 700;
-        color: #00ffe0; text-transform: uppercase;
-        box-shadow: 0 0 20px rgba(0,255,224,0.15);
-      }
-      .eq-commander-info { flex: 1; min-width: 0; }
-      .eq-commander-codename {
-        font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 700;
-        color: #fff; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 2px;
-      }
-      .eq-commander-rank {
-        font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing: 0.2em;
-        text-transform: uppercase; color: #00ffe0; margin-bottom: 8px;
-      }
-      .eq-commander-meta {
-        font-size: 11px; color: rgba(255,255,255,0.35); display: flex; gap: 14px; flex-wrap: wrap;
-      }
-      .eq-commander-meta span { display: flex; align-items: center; gap: 4px; }
-      .eq-power-badge {
-        background: rgba(0,255,224,0.1); border: 1px solid rgba(0,255,224,0.3);
-        border-radius: 4px; padding: 10px 14px; text-align: center; min-width: 80px;
-      }
-      .eq-power-badge-val {
-        font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700;
-        color: #00ffe0; line-height: 1; display: block;
-      }
-      .eq-power-badge-label {
-        font-family: 'Rajdhani', sans-serif; font-size: 8px; letter-spacing: 0.2em;
-        color: rgba(0,255,224,0.5); text-transform: uppercase; display: block; margin-top: 3px;
-      }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-      /* Stats grid */
-      .eq-stats-grid {
-        display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;
-      }
-      @media (min-width: 480px) { .eq-stats-grid { grid-template-columns: repeat(4, 1fr); } }
-      .eq-stat-card {
-        background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 4px; padding: 12px 14px; text-align: center;
-      }
-      .eq-stat-val {
-        font-family: 'Rajdhani', sans-serif; font-size: 22px; font-weight: 700;
-        color: #fff; display: block; line-height: 1;
-      }
-      .eq-stat-label {
-        font-family: 'Rajdhani', sans-serif; font-size: 9px; letter-spacing: 0.16em;
-        color: rgba(255,255,255,0.35); text-transform: uppercase; display: block; margin-top: 4px;
-      }
+    .nav-btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+    }
 
-      /* Threat matrix */
-      .eq-section-title {
-        font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing: 0.24em;
-        text-transform: uppercase; color: rgba(0,255,224,0.5);
-        margin-bottom: 12px; padding-bottom: 8px;
-        border-bottom: 1px solid rgba(255,255,255,0.07);
-      }
-      .eq-threat-matrix { margin-bottom: 20px; }
-      .eq-threat-matrix-row {
-        display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
-      }
-      .eq-tm-label {
-        font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing: 0.1em;
-        text-transform: uppercase; color: rgba(255,255,255,0.5); width: 80px; flex-shrink: 0;
-      }
-      .eq-tm-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
-      .eq-tm-bar { height: 100%; border-radius: 3px; transition: width 1s cubic-bezier(.4,0,.2,1), background 1s; }
-      .eq-tm-val {
-        font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700;
-        width: 30px; text-align: right; flex-shrink: 0;
-      }
-      .eq-tm-status { font-family: 'Rajdhani', sans-serif; font-size: 9px; letter-spacing:0.1em; text-transform:uppercase; width: 60px; flex-shrink:0; }
+    .nav-btn-ghost {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--fg-muted);
+    }
 
-      /* Decision log */
-      .eq-decision-log { margin-bottom: 20px; }
-      .eq-decision-item {
-        display: flex; gap: 12px; padding: 10px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-      }
-      .eq-decision-item:last-child { border-bottom: none; }
-      .eq-di-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
-      .eq-di-dot.win { background: #00ffe0; box-shadow: 0 0 6px rgba(0,255,224,0.5); }
-      .eq-di-dot.loss { background: #ff5555; box-shadow: 0 0 6px rgba(255,85,85,0.5); }
-      .eq-di-content { flex: 1; min-width: 0; }
-      .eq-di-title { font-size: 12px; color: rgba(255,255,255,0.75); line-height: 1.4; margin-bottom: 2px; }
-      .eq-di-meta { font-family: 'Rajdhani', sans-serif; font-size: 10px; letter-spacing:0.06em; color: rgba(255,255,255,0.3); }
-      .eq-di-score { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700; flex-shrink:0; }
-      .eq-di-score.pos { color: #00ffe0; }
-      .eq-di-score.neg { color: #ff6666; }
-      .eq-empty-log {
-        text-align: center; padding: 24px; font-size: 12px; color: rgba(255,255,255,0.25);
-        font-style: italic;
-      }
+    .nav-btn-ghost:hover {
+      color: var(--fg);
+      border-color: var(--border-strong);
+      background: rgba(0,0,0,0.04);
+    }
 
-      /* Active ops */
-      .eq-active-ops { margin-bottom: 20px; }
-      .eq-op-item {
-        background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 3px; padding: 12px 14px; margin-bottom: 8px;
-        display: flex; gap: 12px; align-items: flex-start;
-      }
-      .eq-op-status-dot {
-        width: 6px; height: 6px; border-radius: 50%; flex-shrink:0; margin-top:5px;
-        animation: blink 1.4s ease-in-out infinite;
-      }
-      .eq-op-status-dot.active { background: #00ffe0; box-shadow:0 0 6px rgba(0,255,224,0.5); }
-      .eq-op-status-dot.standby { background: #ffc844; box-shadow:0 0 6px rgba(255,200,68,0.4); animation: none; }
-      .eq-op-name { font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700; color:#fff; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:3px; }
-      .eq-op-desc { font-size:11px; color:rgba(255,255,255,0.4); line-height:1.45; }
-      .eq-op-badge { font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; padding:3px 7px; border-radius:2px; flex-shrink:0; margin-top:1px; }
-      .eq-op-badge.active-b { background:rgba(0,255,224,0.1); color:#00ffe0; border:1px solid rgba(0,255,224,0.25); }
-      .eq-op-badge.standby-b { background:rgba(255,200,68,0.1); color:#ffc844; border:1px solid rgba(255,200,68,0.2); }
+    .nav-btn-solid {
+      background: var(--fg);
+      border: 1px solid var(--fg);
+      color: #fff;
+    }
 
-      /* Achievements */
-      .eq-achievements { margin-bottom: 24px; }
-      .eq-achievement-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-      @media (min-width: 480px) { .eq-achievement-grid { grid-template-columns: repeat(4, 1fr); } }
-      .eq-ach {
-        background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 4px; padding: 10px 8px; text-align: center;
-        transition: border-color .2s, background .2s;
-      }
-      .eq-ach.unlocked { border-color: rgba(0,255,224,0.3); background: rgba(0,255,224,0.05); }
-      .eq-ach-icon { font-size: 20px; display: block; margin-bottom: 5px; filter: grayscale(1); opacity: 0.3; }
-      .eq-ach.unlocked .eq-ach-icon { filter: none; opacity: 1; }
-      .eq-ach-name { font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.3); }
-      .eq-ach.unlocked .eq-ach-name { color:rgba(0,255,224,0.7); }
+    .nav-btn-solid:hover {
+      background: #222;
+      border-color: #222;
+    }
 
-      /* Dashboard action btn */
-      .eq-dash-action {
-        background: rgba(0,255,224,0.88); color: #000a14;
-        font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 700;
-        letter-spacing: 0.2em; text-transform: uppercase;
-        padding: 14px 24px; border: none; border-radius: 3px;
-        cursor: pointer; width: 100%; margin-bottom: 10px;
-        transition: background .2s, box-shadow .2s;
-        min-height: 44px;
-      }
-      .eq-dash-action:hover { background: #00ffe0; box-shadow: 0 0 22px rgba(0,255,224,0.3); }
-      .eq-dash-action.secondary {
-        background: none; color: rgba(255,255,255,0.5);
-        border: 1px solid rgba(255,255,255,0.12);
-      }
-      .eq-dash-action.secondary:hover { border-color: rgba(255,80,80,0.5); color: #ff8080; background: rgba(255,50,50,0.05); }
+    /* ── MAIN ── */
+    main {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-      /* ── SIGINT TICKER ── */
-      #eq-ticker-wrap {
-        position: fixed; bottom: 0; left: 0; right: 0; z-index: 8000;
-        pointer-events: none; background: rgba(0,0,0,0.82);
-        border-top: 1px solid rgba(0,255,224,0.12);
-        backdrop-filter: blur(8px); height: 26px;
-        display: flex; align-items: center; overflow: hidden;
-      }
-      #eq-ticker-label {
-        font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.22em;
-        color:#00ffe0; padding:0 10px; flex-shrink:0; text-transform:uppercase;
-        border-right:1px solid rgba(0,255,224,0.18); height:100%; display:flex; align-items:center;
-      }
-      #eq-ticker-track {
-        display:flex; align-items:center; animation:tickerScroll 46s linear infinite; white-space:nowrap;
-      }
-      .eq-tick-item { font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.1em; color:rgba(255,255,255,0.4); padding:0 28px; text-transform:uppercase; flex-shrink:0; }
-      .eq-tick-item span { color:#ffc844; }
-      @keyframes tickerScroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    /* ── HERO ── */
+    .hero {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      padding: 120px 80px 100px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      position: relative;
+    }
 
-      /* ── THREAT STRIP (mobile bottom) ── */
-      #eq-threat-panel {
-        position: fixed; z-index: 8100;
-        bottom: 26px; left: 0; right: 0;
-        background: rgba(4,8,16,0.9); border-top: 1px solid rgba(0,255,224,0.14);
-        backdrop-filter: blur(12px); padding: 5px 12px;
-        display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;
-        overflow: hidden; height: 30px; pointer-events: none;
-      }
-      @media (min-width: 640px) {
-        #eq-threat-panel {
-          bottom: auto; left: auto; right: 16px; top: 58px;
-          width: 200px; height: auto; flex-direction: column; align-items: stretch;
-          gap: 6px; padding: 12px 14px; flex-wrap: wrap; overflow: visible;
-          border: 1px solid rgba(0,255,224,0.18); border-radius: 4px;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.5); pointer-events: none;
-        }
-      }
-      .eq-threat-header {
-        font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.22em;
-        text-transform:uppercase; color:rgba(0,255,224,0.5); margin-bottom:2px; display:none;
-      }
-      @media (min-width:640px) { .eq-threat-header { display:block; } }
-      .eq-threat-row { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
-      @media (min-width:640px) { .eq-threat-row { flex:none; } }
-      .eq-threat-label { font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.42); width:40px; flex-shrink:0; }
-      .eq-threat-bar-wrap { flex:1; height:4px; background:rgba(255,255,255,0.07); border-radius:2px; overflow:hidden; }
-      .eq-threat-bar { height:100%; border-radius:2px; transition:width .8s cubic-bezier(.4,0,.2,1), background .8s; }
-      .eq-threat-val { font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700; width:26px; text-align:right; flex-shrink:0; }
+    .hero-content {
+      max-width: 680px;
+    }
 
-      /* ── CRISIS BUTTON ── */
-      #eq-crisis-btn {
-        position: fixed; z-index: 9200;
-        bottom: 64px; left: 50%; transform: translateX(-50%);
-        background: rgba(4,8,16,0.92); border: 1px solid #00ffe0; color: #00ffe0;
-        font-family:'Rajdhani',sans-serif; font-size:12px; font-weight:700;
-        letter-spacing:0.14em; text-transform:uppercase; padding:9px 18px;
-        cursor:pointer; border-radius:3px;
-        animation: pulseBorder 2.6s ease-in-out infinite;
-        display:flex; align-items:center; gap:8px; backdrop-filter:blur(14px);
-        transition:box-shadow .2s; white-space:nowrap;
-      }
-      @media (min-width:640px) { #eq-crisis-btn { left:auto; right:24px; bottom:38px; transform:none; } }
-      #eq-crisis-btn .dot { width:6px; height:6px; border-radius:50%; background:#ff4444; box-shadow:0 0 6px #ff4444; animation:blink 1s ease-in-out infinite; flex-shrink:0; }
-      @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
-      @keyframes pulseBorder {
-        0%,100%{ box-shadow:0 0 18px rgba(0,255,224,0.2), inset 0 0 8px rgba(0,255,224,0.04); }
-        50%{ box-shadow:0 0 30px rgba(0,255,224,0.45), inset 0 0 14px rgba(0,255,224,0.1); }
-      }
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+      margin-bottom: 32px;
+    }
 
-      /* ── CRISIS PANEL ── */
-      #eq-crisis-panel {
-        position:fixed; z-index:9500;
-        bottom:0; left:0; right:0; top:auto; max-height:92vh;
-        border-radius:12px 12px 0 0;
-        transform:translateY(100%);
-        background:rgba(4,8,18,0.98);
-        border:1px solid rgba(0,255,224,0.25); border-bottom:none;
-        overflow-y:auto;
-        box-shadow:0 -4px 60px rgba(0,255,224,0.1);
-        backdrop-filter:blur(24px);
-        opacity:0; pointer-events:none;
-        transition:opacity .3s, transform .35s cubic-bezier(0.32,0.72,0,1);
-        font-family:'Inter',sans-serif;
-      }
-      #eq-crisis-panel.open { opacity:1; pointer-events:auto; transform:translateY(0); }
-      @media (min-width:640px) {
-        #eq-crisis-panel {
-          bottom:auto; left:50%; top:50%; width:min(540px,94vw); max-height:90vh;
-          border-radius:6px; border-bottom:1px solid rgba(0,255,224,0.25);
-          transform:translate(-50%,-50%) scale(0.92);
-        }
-        #eq-crisis-panel.open { transform:translate(-50%,-50%) scale(1); }
-      }
-      #eq-drag-handle { display:flex; justify-content:center; padding:10px 0 4px; }
-      #eq-drag-handle span { width:36px; height:4px; border-radius:2px; background:rgba(255,255,255,0.18); }
-      @media (min-width:640px) { #eq-drag-handle { display:none; } }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--live);
+      animation: livePulse 2s ease-in-out infinite;
+    }
 
-      .eq-panel-header {
-        padding:14px 20px 12px; border-bottom:1px solid rgba(0,255,224,0.1);
-        display:flex; justify-content:space-between; align-items:flex-start;
-        position:sticky; top:0; background:rgba(4,8,18,0.98); z-index:1;
-      }
-      .eq-panel-title { font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(0,255,224,0.5); margin-bottom:4px; }
-      .eq-panel-headline { font-family:'Rajdhani',sans-serif; font-size:clamp(15px,4vw,19px); font-weight:700; color:#fff; line-height:1.2; }
-      .eq-close-btn { background:none; border:none; color:rgba(255,255,255,0.3); font-size:20px; cursor:pointer; line-height:1; padding:0; margin-left:12px; flex-shrink:0; transition:color .2s; min-width:32px; min-height:32px; display:flex; align-items:center; justify-content:center; }
-      .eq-close-btn:hover { color:#fff; }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
 
-      /* Crisis timer */
-      .eq-timer-bar {
-        height:3px; background:rgba(255,255,255,0.08); margin:0;
-        overflow:hidden;
-      }
-      .eq-timer-fill {
-        height:100%; background:linear-gradient(90deg,#00ffe0,#0088ff);
-        transition:width .1s linear; width:100%;
-      }
+    .hero-headline {
+      font-size: clamp(40px, 6vw, 82px);
+      font-weight: 800;
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+      color: var(--fg);
+      margin-bottom: 24px;
+    }
 
-      .eq-panel-body { padding:16px 20px 24px; }
-      .eq-intel-bar { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
-      .eq-intel-chip { font-size:9px; letter-spacing:0.14em; text-transform:uppercase; padding:3px 8px; border-radius:2px; font-family:'Rajdhani',sans-serif; font-weight:600; }
-      .eq-intel-chip.red { background:rgba(255,68,68,0.12); color:#ff6666; border:1px solid rgba(255,68,68,0.25); }
-      .eq-intel-chip.yellow { background:rgba(255,200,68,0.1); color:#ffc844; border:1px solid rgba(255,200,68,0.2); }
-      .eq-intel-chip.blue { background:rgba(0,160,255,0.1); color:#44aaff; border:1px solid rgba(0,160,255,0.2); }
+    .hero-sub {
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.65;
+      color: var(--fg-muted);
+      max-width: 520px;
+      margin-bottom: 40px;
+    }
 
-      .eq-crisis-desc { font-size:clamp(12px,3vw,13px); line-height:1.65; color:rgba(255,255,255,0.65); margin-bottom:16px; border-left:2px solid rgba(0,255,224,0.2); padding-left:12px; }
-      .eq-crisis-options { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
-      .eq-crisis-opt {
-        background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08);
-        border-radius:3px; padding:12px 14px; cursor:pointer;
-        transition:border-color .2s, background .2s; display:flex; align-items:flex-start; gap:12px;
-        -webkit-tap-highlight-color:transparent;
-      }
-      .eq-crisis-opt:hover:not(.chosen):not(.wrong) { border-color:rgba(0,255,224,0.35); background:rgba(0,255,224,0.04); }
-      .eq-crisis-opt:active:not(.chosen):not(.wrong) { background:rgba(0,255,224,0.07); }
-      .eq-crisis-opt.chosen { border-color:#00ffe0; background:rgba(0,255,224,0.07); }
-      .eq-crisis-opt.wrong { border-color:rgba(255,68,68,0.4); background:rgba(255,68,68,0.05); }
-      .eq-opt-key { font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:0.1em; color:rgba(0,255,224,0.5); font-weight:700; white-space:nowrap; padding-top:1px; min-width:14px; }
-      .eq-opt-text { font-size:clamp(12px,3vw,13px); line-height:1.5; color:rgba(255,255,255,0.78); }
-      .eq-opt-effect { font-size:10px; color:rgba(255,255,255,0.32); margin-top:4px; font-style:italic; }
-      .eq-outcome { display:none; background:rgba(0,255,224,0.05); border:1px solid rgba(0,255,224,0.18); border-radius:3px; padding:12px 14px; margin-bottom:14px; }
-      .eq-outcome.show { display:block; }
-      .eq-outcome.fail { background:rgba(255,68,68,0.05); border-color:rgba(255,68,68,0.2); }
-      .eq-outcome-title { font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:6px; }
-      .eq-outcome.show .eq-outcome-title { color:#00ffe0; }
-      .eq-outcome.fail .eq-outcome-title { color:#ff6666; }
-      .eq-outcome-body { font-size:clamp(12px,3vw,13px); line-height:1.55; color:rgba(255,255,255,0.65); }
-      .eq-score-bar { display:flex; align-items:center; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.07); padding-top:14px; gap:12px; }
-      .eq-score-label { font-family:'Rajdhani',sans-serif; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:rgba(255,255,255,0.28); }
-      .eq-score-val { font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; color:#00ffe0; }
-      .eq-next-btn { background:rgba(0,255,224,0.08); border:1px solid rgba(0,255,224,0.35); color:#00ffe0; font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; padding:9px 16px; cursor:pointer; border-radius:2px; transition:background .2s; min-height:40px; }
-      .eq-next-btn:hover { background:rgba(0,255,224,0.18); }
-      .eq-next-btn:disabled { opacity:0.25; pointer-events:none; }
+    .hero-ctas {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
 
-      /* ── HOTSPOTS ── */
-      .eq-hotspot { position:fixed; z-index:8800; pointer-events:auto; cursor:pointer; width:9px; height:9px; border-radius:50%; background:radial-gradient(circle,#ff5500,rgba(255,60,0,0.55)); box-shadow:0 0 8px #ff4400; animation:hotspotPulse 2.2s ease-in-out infinite; display:none; }
-      .eq-hotspot::before { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:9px; height:9px; border-radius:50%; border:1px solid rgba(255,80,0,0.3); animation:ringExpand 2.2s ease-out infinite; }
-      .eq-hotspot-tooltip { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); background:rgba(4,8,16,0.96); border:1px solid rgba(255,68,0,0.3); color:#fff; font-family:'Rajdhani',sans-serif; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; padding:4px 9px; white-space:nowrap; border-radius:2px; opacity:0; transition:opacity .2s; pointer-events:none; }
-      .eq-hotspot:hover .eq-hotspot-tooltip { opacity:1; }
-      @media (min-width:768px) { .eq-hotspot { display:block; } }
-      @keyframes hotspotPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.35)} }
-      @keyframes ringExpand { 0%{width:9px;height:9px;opacity:0.8} 100%{width:44px;height:44px;opacity:0} }
+    .cta-primary {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 13px 28px;
+      background: var(--fg);
+      color: #fff;
+      border: 1.5px solid var(--fg);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
 
-      /* ── TOAST NOTIFICATIONS ── */
-      #eq-toast-wrap { position:fixed; top:54px; right:16px; z-index:9600; pointer-events:none; display:flex; flex-direction:column; gap:8px; }
-      .eq-toast {
-        background:rgba(4,8,18,0.96); border:1px solid rgba(0,255,224,0.25);
-        border-radius:4px; padding:10px 14px; max-width:280px;
-        backdrop-filter:blur(16px);
-        font-family:'Rajdhani',sans-serif; font-size:11px; letter-spacing:0.08em;
-        color:#fff; display:flex; align-items:flex-start; gap:10px;
-        animation:toastIn .3s ease, toastOut .3s ease 2.7s forwards;
-      }
-      .eq-toast.achievement { border-color:rgba(255,200,68,0.4); }
-      .eq-toast-icon { font-size:16px; flex-shrink:0; line-height:1; }
-      .eq-toast-body { flex:1; }
-      .eq-toast-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:rgba(0,255,224,0.55); margin-bottom:2px; }
-      .eq-toast.achievement .eq-toast-label { color:rgba(255,200,68,0.7); }
-      .eq-toast-msg { font-size:12px; color:rgba(255,255,255,0.75); line-height:1.4; }
-      @keyframes toastIn { from{opacity:0;transform:translateX(16px)} to{opacity:1;transform:translateX(0)} }
-      @keyframes toastOut { from{opacity:1} to{opacity:0;transform:translateX(16px)} }
+    .cta-primary:hover {
+      background: #1a1a1a;
+      transform: translateY(-1px);
+    }
 
-      /* ── PARTICLES ── */
-      .eq-particle { position:fixed; pointer-events:none; z-index:99990; width:4px; height:4px; border-radius:50%; background:#00ffe0; transform:translate(-50%,-50%); }
+    .cta-secondary {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 13px 28px;
+      background: transparent;
+      color: var(--fg);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
 
-      /* ── SCROLL REVEAL ── */
-      .eq-reveal { opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease; }
-      .eq-reveal.in { opacity:1; transform:translateY(0); }
+    .cta-secondary:hover {
+      border-color: var(--fg);
+      background: rgba(0,0,0,0.03);
+    }
 
-      /* ── GLITCH ── */
-      .eq-glitch { position:relative; display:inline-block; }
-      .eq-glitch::before,.eq-glitch::after { content:attr(data-text); position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; }
-      .eq-glitch.glitching::before { opacity:1; color:#0ff; animation:glitch1 .13s steps(2) infinite; }
-      .eq-glitch.glitching::after { opacity:1; color:#f0f; animation:glitch2 .13s steps(2) infinite; }
-      @keyframes glitch1 { 0%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,0)} 50%{clip-path:inset(40% 0 40% 0);transform:translate(2px,0)} 100%{clip-path:inset(20% 0 60% 0);transform:translate(-3px,0)} }
-      @keyframes glitch2 { 0%{clip-path:inset(60% 0 20% 0);transform:translate(3px,0)} 50%{clip-path:inset(40% 0 40% 0);transform:translate(-2px,0)} 100%{clip-path:inset(60% 0 20% 0);transform:translate(3px,0)} }
-    </style>
+    /* ── THREAT INDEX CARD ── */
+    .threat-card {
+      position: absolute;
+      right: 80px;
+      bottom: 80px;
+      background: #fff;
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 20px 24px;
+      min-width: 220px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+    }
 
-    <!-- Original compiled app (unchanged) -->
-    <script type="module" crossorigin src="/assets/index-B808EA05.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BQ34BD58.css">
-  </head>
-  <body>
-    <!-- EasyA Logo Injection -->
-    <style>
-      #easya-hero-badge {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        margin-bottom: 20px;
-      }
-      #easya-hero-badge img {
-        width: 96px;
-        height: 96px;
-        object-fit: contain;
-        border-radius: 14px;
-        display: block;
-      }
-      #easya-hero-badge .easya-label {
-        font-family: 'Inter', sans-serif;
-        font-size: 10px;
-        letter-spacing: 0.18em;
-        color: rgba(0, 255, 224, 0.55);
-        text-transform: uppercase;
-        margin-top: 6px;
-      }
-      #easya-twitter-link {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        text-decoration: none;
-        background: rgba(0, 255, 224, 0.07);
-        border: 1px solid rgba(0, 255, 224, 0.22);
-        border-radius: 6px;
-        padding: 8px 13px;
-        transition: background 0.2s, border-color 0.2s;
-      }
-      #easya-twitter-link:hover {
-        background: rgba(0, 255, 224, 0.14);
-        border-color: rgba(0, 255, 224, 0.45);
-      }
-      #easya-twitter-link svg {
-        width: 16px;
-        height: 16px;
-        fill: #00ffe0;
-        flex-shrink: 0;
-      }
-      #easya-twitter-link span {
-        font-family: 'Rajdhani', sans-serif;
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        color: rgba(0, 255, 224, 0.85);
-        white-space: nowrap;
-      }
-    </style>
-    <script>
-      (function injectEasyALogo() {
-        function tryInject() {
-          const root = document.getElementById('root');
-          if (!root || !root.children.length) {
-            setTimeout(tryInject, 200);
-            return;
-          }
-          const h1 = root.querySelector('h1');
-          if (!h1) {
-            setTimeout(tryInject, 200);
-            return;
-          }
-          if (document.getElementById('easya-hero-badge')) return;
-          const badge = document.createElement('div');
-          badge.id = 'easya-hero-badge';
-          badge.innerHTML = `
-            <div style="display:flex;flex-direction:column;align-items:center;gap:0">
-              <img src="/easya-logo.png" alt="EasyA Kickstart" />
-              <span class="easya-label">EasyA Kickstart</span>
-            </div>
-            <a id="easya-twitter-link" href="https://x.com/jamesblock_" target="_blank" rel="noopener noreferrer">
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.733-8.835L1.254 2.25H8.08l4.253 5.622 5.912-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              <span>@jamesblock_</span>
-            </a>
-          `;
-          h1.parentNode.insertBefore(badge, h1);
-        }
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', tryInject);
-        } else {
-          tryInject();
-        }
-      })();
-    </script>
-    <div id="root"></div>
+    .threat-card-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg-subtle);
+      margin-bottom: 14px;
+    }
 
-    <!-- Globe canvas (behind everything) -->
-    <canvas id="eq-bg-canvas"></canvas>
-    <div id="eq-scanlines"></div>
-    <div id="eq-vignette"></div>
+    .threat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
 
-    <!-- Cursor -->
-    <div id="eq-cursor"></div>
-    <div id="eq-cursor-trail"></div>
+    .threat-row:last-child { margin-bottom: 0; }
 
-    <!-- Auth Top Bar -->
-    <div id="eq-topbar">
-      <div class="eq-topbar-logo">EQUINOX</div>
-      <div class="eq-topbar-right">
-        <div id="eq-auth-logged-out">
-          <button class="eq-topbar-btn eq-btn-login" id="eq-btn-login">Sign In</button>
-          <button class="eq-topbar-btn eq-btn-register" id="eq-btn-register">Create Account</button>
+    .threat-name {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+      min-width: 40px;
+    }
+
+    .threat-bar-wrap {
+      flex: 1;
+      height: 3px;
+      background: rgba(0,0,0,0.08);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .threat-bar {
+      height: 100%;
+      background: var(--fg);
+      border-radius: 2px;
+      transition: width 1.2s ease;
+    }
+
+    .threat-val {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--fg);
+      min-width: 24px;
+      text-align: right;
+    }
+
+    /* ── NEWS CARD ── */
+    .news-card {
+      position: absolute;
+      right: 80px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #fff;
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 16px 18px;
+      max-width: 280px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .news-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .news-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      background: var(--fg);
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    .news-tag.intel { background: #374151; }
+    .news-tag.diplo { background: #1d4ed8; }
+    .news-tag.econ { background: #065f46; }
+
+    .news-time {
+      font-size: 11px;
+      color: var(--fg-subtle);
+    }
+
+    .news-title {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--fg);
+      margin-bottom: 8px;
+    }
+
+    .news-link {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .news-link:hover { color: var(--fg); }
+
+    /* ── SCROLL INDICATOR ── */
+    .scroll-indicator {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg-subtle);
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 32px;
+      background: linear-gradient(to bottom, transparent, var(--fg-subtle));
+      animation: scrollDown 1.8s ease-in-out infinite;
+    }
+
+    @keyframes scrollDown {
+      0% { transform: scaleY(0); transform-origin: top; }
+      50% { transform: scaleY(1); transform-origin: top; }
+      51% { transform: scaleY(1); transform-origin: bottom; }
+      100% { transform: scaleY(0); transform-origin: bottom; }
+    }
+
+    /* ── TICKER ── */
+    .ticker-wrap {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      z-index: 50;
+      height: 32px;
+      background: var(--fg);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .ticker-label {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0 16px;
+      border-right: 1px solid rgba(255,255,255,0.12);
+      height: 100%;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      color: rgba(255,255,255,0.5);
+    }
+
+    .ticker-track {
+      display: flex;
+      white-space: nowrap;
+      animation: ticker 38s linear infinite;
+    }
+
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    .ticker-item {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      padding: 0 28px;
+      color: rgba(255,255,255,0.72);
+    }
+
+    .ticker-item strong {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .ticker-sep {
+      color: rgba(255,255,255,0.2);
+      padding: 0 4px;
+    }
+
+    /* ── FEATURES SECTION ── */
+    .features {
+      position: relative;
+      z-index: 1;
+      padding: 100px 80px 80px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg-subtle);
+      margin-bottom: 48px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .feature-item {
+      background: #fff;
+      padding: 40px 36px;
+      transition: background 0.15s;
+    }
+
+    .feature-item:hover { background: #fafafa; }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .feature-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--fg);
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: var(--fg-muted);
+    }
+
+    /* ── CTA SECTION ── */
+    .cta-section {
+      position: relative;
+      z-index: 1;
+      padding: 80px;
+      max-width: 1440px;
+      margin: 0 auto 120px;
+      width: 100%;
+    }
+
+    .cta-box {
+      background: var(--fg);
+      border-radius: 16px;
+      padding: 72px 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+    }
+
+    .cta-box-headline {
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
+      max-width: 480px;
+      line-height: 1.1;
+    }
+
+    .cta-box-btn {
+      flex-shrink: 0;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 14px 32px;
+      background: #fff;
+      color: var(--fg);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+
+    .cta-box-btn:hover {
+      background: rgba(255,255,255,0.9);
+      transform: translateY(-1px);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      padding: 32px 80px 60px;
+      border-top: 1px solid var(--border);
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .footer-logo {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--fg-subtle);
+    }
+
+    .footer-social {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-social a {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--fg-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-social a:hover { color: var(--fg); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 0 20px; }
+      .hero { padding: 100px 24px 80px; flex-direction: column; }
+      .hero-content { max-width: 100%; }
+      .threat-card, .news-card { display: none; }
+      .features { padding: 60px 24px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .cta-section { padding: 24px; margin-bottom: 60px; }
+      .cta-box { flex-direction: column; padding: 48px 32px; text-align: center; }
+      footer { padding: 24px; }
+    }
+
+    /* ── ENTRANCE ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .live-badge { animation: fadeUp 0.5s ease both; animation-delay: 0.1s; opacity: 0; }
+    .hero-headline { animation: fadeUp 0.6s ease both; animation-delay: 0.2s; opacity: 0; }
+    .hero-sub { animation: fadeUp 0.6s ease both; animation-delay: 0.32s; opacity: 0; }
+    .hero-ctas { animation: fadeUp 0.6s ease both; animation-delay: 0.42s; opacity: 0; }
+    .news-card { animation: fadeUp 0.6s ease both; animation-delay: 0.5s; opacity: 0; }
+    .threat-card { animation: fadeUp 0.6s ease both; animation-delay: 0.62s; opacity: 0; }
+    .scroll-indicator { animation: fadeUp 0.6s ease both; animation-delay: 0.8s; opacity: 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Dot grid -->
+  <div class="dot-grid"></div>
+
+  <!-- Nav -->
+  <nav>
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-icon">
+        <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="7" cy="7" r="2.5" fill="#0a0a0a"/>
+          <circle cx="7" cy="1.5" r="1" fill="#0a0a0a"/>
+          <circle cx="7" cy="12.5" r="1" fill="#0a0a0a"/>
+          <circle cx="1.5" cy="7" r="1" fill="#0a0a0a"/>
+          <circle cx="12.5" cy="7" r="1" fill="#0a0a0a"/>
+        </svg>
+      </div>
+      Equinox
+    </a>
+    <div class="nav-right">
+      <a href="#" class="nav-btn nav-btn-ghost" onclick="openAuth(event,'signin')">Sign In</a>
+      <a href="#" class="nav-btn nav-btn-solid" onclick="openAuth(event,'signup')">Create Account</a>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="live-badge">
+          <span class="live-dot"></span>
+          Live · Real-time geopolitical strategy
         </div>
-        <div id="eq-auth-logged-in">
-          <div>
-            <div class="eq-user-rank" id="eq-topbar-rank">Field Analyst</div>
-            <div class="eq-user-name" id="eq-topbar-name">—</div>
-          </div>
-          <button class="eq-topbar-btn eq-btn-dashboard" id="eq-btn-open-dash">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="0" y="0" width="5" height="5" rx="1" fill="#00ffe0"/><rect x="7" y="0" width="5" height="5" rx="1" fill="#00ffe0"/><rect x="0" y="7" width="5" height="5" rx="1" fill="#00ffe0"/><rect x="7" y="7" width="5" height="5" rx="1" fill="#00ffe0"/></svg>
-            HQ
-          </button>
-          <button class="eq-topbar-btn eq-btn-logout" id="eq-btn-logout">Logout</button>
+        <h1 class="hero-headline">Every nation<br>has a price.<br>Know yours.</h1>
+        <p class="hero-sub">
+          A grand strategy game where you command intelligence agencies, forge diplomatic alliances, control economies, and decide which nations rise and which collapse. The world map is your board. History is your weapon.
+        </p>
+        <div class="hero-ctas">
+          <a href="#" class="cta-primary">Play Demo</a>
+          <a href="#" class="cta-secondary">Watch Trailer</a>
         </div>
       </div>
-    </div>
 
-    <!-- Auth Modal -->
-    <div id="eq-auth-modal" role="dialog" aria-modal="true" aria-label="Authentication">
-      <div class="eq-auth-card">
-        <div class="eq-auth-header">
-          <div class="eq-auth-emblem">
-            <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="11" cy="11" r="10" stroke="#00ffe0" stroke-width="1.2"/>
-              <path d="M11 4v14M4 11h14M7.5 7.5l7 7M14.5 7.5l-7 7" stroke="#00ffe0" stroke-width="1" opacity="0.5"/>
+      <!-- News card (top right, like Varsko) -->
+      <div class="news-card">
+        <div class="news-meta">
+          <span class="news-tag intel">Intel</span>
+          <span class="news-time">4m ago</span>
+        </div>
+        <div class="news-title">Arctic Gamma: Anomalous transmissions detected — investigating</div>
+        <div class="news-link">
+          Open source
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 8L8 2M8 2H4M8 2V6" stroke="#9ca3af" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Threat Index card (bottom right) -->
+      <div class="threat-card">
+        <div class="threat-card-label">Global Threat Index</div>
+        <div class="threat-row">
+          <span class="threat-name">DIPLO</span>
+          <div class="threat-bar-wrap"><div class="threat-bar" style="width:52%"></div></div>
+          <span class="threat-val">52</span>
+        </div>
+        <div class="threat-row">
+          <span class="threat-name">MILIT</span>
+          <div class="threat-bar-wrap"><div class="threat-bar" style="width:30%"></div></div>
+          <span class="threat-val">30</span>
+        </div>
+        <div class="threat-row">
+          <span class="threat-name">FCON</span>
+          <div class="threat-bar-wrap"><div class="threat-bar" style="width:61%"></div></div>
+          <span class="threat-val">61</span>
+        </div>
+        <div class="threat-row">
+          <span class="threat-name">INTEL</span>
+          <div class="threat-bar-wrap"><div class="threat-bar" style="width:44%"></div></div>
+          <span class="threat-val">44</span>
+        </div>
+      </div>
+
+      <!-- Scroll indicator -->
+      <div class="scroll-indicator">
+        Scroll to explore
+        <div class="scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+      <div class="section-label">Capabilities</div>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="3" stroke="#0a0a0a" stroke-width="1.5"/>
+              <path d="M9 2v2M9 14v2M2 9h2M14 9h2" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
           </div>
-          <div class="eq-auth-pretitle">Classified Access Portal</div>
-          <div class="eq-auth-title" id="eq-auth-modal-title">Sign In</div>
-          <div class="eq-auth-sub">Authorized personnel only. All sessions are logged and monitored.</div>
+          <div class="feature-title">Intelligence Networks</div>
+          <div class="feature-desc">Build and manage covert intelligence operations across every continent. Deploy agents, intercept signals, and shape the information landscape.</div>
         </div>
-        <div class="eq-auth-tabs">
-          <div class="eq-auth-tab active" id="eq-tab-signin" data-tab="signin">Sign In</div>
-          <div class="eq-auth-tab" id="eq-tab-register" data-tab="register">Create Account</div>
-        </div>
-        <div class="eq-auth-body">
-          <!-- Sign In Form -->
-          <div id="eq-form-signin">
-            <div class="eq-auth-field">
-              <label class="eq-auth-label" for="si-codename">Commander Codename</label>
-              <input class="eq-auth-input" id="si-codename" type="text" placeholder="Your codename" autocomplete="username" maxlength="24" />
-            </div>
-            <div class="eq-auth-field">
-              <label class="eq-auth-label" for="si-code">Access Code</label>
-              <input class="eq-auth-input" id="si-code" type="password" placeholder="••••••••" autocomplete="current-password" />
-            </div>
-            <div class="eq-auth-error" id="si-error"></div>
-            <button class="eq-auth-submit" id="si-submit">Authenticate</button>
-            <div class="eq-auth-footer">Demo mode — data stored locally on your device. <span>No server. No tracking.</span></div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="2" width="6" height="6" rx="1.5" stroke="#0a0a0a" stroke-width="1.5"/>
+              <rect x="10" y="2" width="6" height="6" rx="1.5" stroke="#0a0a0a" stroke-width="1.5"/>
+              <rect x="2" y="10" width="6" height="6" rx="1.5" stroke="#0a0a0a" stroke-width="1.5"/>
+              <rect x="10" y="10" width="6" height="6" rx="1.5" stroke="#0a0a0a" stroke-width="1.5"/>
+            </svg>
           </div>
-          <!-- Register Form -->
-          <div id="eq-form-register" style="display:none">
-            <div class="eq-auth-field">
-              <label class="eq-auth-label" for="reg-codename">Choose a Codename</label>
-              <input class="eq-auth-input" id="reg-codename" type="text" placeholder="e.g. SHADOW, IRONCLAD, CIPHER" autocomplete="username" maxlength="24" />
-            </div>
-            <div class="eq-auth-field">
-              <label class="eq-auth-label" for="reg-code">Set Access Code</label>
-              <input class="eq-auth-input" id="reg-code" type="password" placeholder="Minimum 6 characters" autocomplete="new-password" />
-            </div>
-            <div class="eq-auth-field">
-              <label class="eq-auth-label" for="reg-code2">Confirm Access Code</label>
-              <input class="eq-auth-input" id="reg-code2" type="password" placeholder="Repeat access code" autocomplete="new-password" />
-            </div>
-            <div class="eq-auth-error" id="reg-error"></div>
-            <button class="eq-auth-submit" id="reg-submit">Establish Identity</button>
-            <div class="eq-auth-footer">Your profile is stored locally. <span>You own your data.</span></div>
+          <div class="feature-title">Diplomatic Alliances</div>
+          <div class="feature-desc">Forge or fracture alliances between world powers. Every treaty, sanction, and back-channel negotiation has consequences that ripple across the board.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M3 14l4-5 3 3 4-6" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="15" cy="5" r="1.5" fill="#0a0a0a"/>
+            </svg>
           </div>
+          <div class="feature-title">Economic Warfare</div>
+          <div class="feature-desc">Control trade routes, currency markets, and resource flows. Collapse rival economies or build dependencies that make nations bow without a single shot fired.</div>
         </div>
       </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+      <div class="cta-box">
+        <div class="cta-box-headline">You don't play a soldier. You play the power behind governments.</div>
+        <a href="#" class="cta-box-btn">Create Account</a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <span class="footer-logo">Equinox</span>
+      <span class="footer-copy">&copy; 2025 Equinox. All rights reserved.</span>
+      <div class="footer-social">
+        <a href="https://x.com/jomosblock" target="_blank">X / Twitter</a>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Ticker -->
+  <div class="ticker-wrap">
+    <span class="ticker-label">Sigint</span>
+    <div class="ticker-track" id="tickerTrack">
+      <span class="ticker-item"><strong>Technician IDs</strong> unverified <span class="ticker-sep">—</span> <strong>Flagged</strong></span>
+      <span class="ticker-item">Sovereign fund acquisition: ports 7, 9 <span class="ticker-sep">—</span> <strong>Monitor</strong></span>
+      <span class="ticker-item">Operation Blackthorn <span class="ticker-sep">—</span> <strong>Active</strong></span>
+      <span class="ticker-item">Arctic Gamma: Anomalous transmissions <span class="ticker-sep">—</span> <strong>Investigating</strong></span>
+      <span class="ticker-item">Channel Lambda compromised <span class="ticker-sep">—</span> <strong>Breach Confirmed</strong></span>
+      <span class="ticker-item">Embargo Nordvik extended 90 days <span class="ticker-sep">—</span> <strong>Authorized</strong></span>
+      <span class="ticker-item">Cell Zeta: Radio silence 70h <span class="ticker-sep">—</span> <strong>Unknown</strong></span>
+      <!-- duplicate for seamless loop -->
+      <span class="ticker-item"><strong>Technician IDs</strong> unverified <span class="ticker-sep">—</span> <strong>Flagged</strong></span>
+      <span class="ticker-item">Sovereign fund acquisition: ports 7, 9 <span class="ticker-sep">—</span> <strong>Monitor</strong></span>
+      <span class="ticker-item">Operation Blackthorn <span class="ticker-sep">—</span> <strong>Active</strong></span>
+      <span class="ticker-item">Arctic Gamma: Anomalous transmissions <span class="ticker-sep">—</span> <strong>Investigating</strong></span>
+      <span class="ticker-item">Channel Lambda compromised <span class="ticker-sep">—</span> <strong>Breach Confirmed</strong></span>
+      <span class="ticker-item">Embargo Nordvik extended 90 days <span class="ticker-sep">—</span> <strong>Authorized</strong></span>
+      <span class="ticker-item">Cell Zeta: Radio silence 70h <span class="ticker-sep">—</span> <strong>Unknown</strong></span>
     </div>
+  </div>
 
-    <!-- Commander Dashboard -->
-    <div id="eq-dash-panel" role="dialog" aria-modal="true" aria-label="Commander HQ">
-      <div class="eq-dash-topbar">
-        <div class="eq-dash-title">Commander HQ — Classified</div>
-        <button class="eq-dash-close" id="eq-dash-close">✕</button>
-      </div>
-      <div class="eq-dash-body">
-        <!-- Commander Card -->
-        <div class="eq-commander-card">
-          <div class="eq-commander-avatar" id="dash-avatar">?</div>
-          <div class="eq-commander-info">
-            <div class="eq-commander-codename" id="dash-codename">—</div>
-            <div class="eq-commander-rank" id="dash-rank">Field Analyst</div>
-            <div class="eq-commander-meta">
-              <span>⏱ Joined: <span id="dash-joined">—</span></span>
-              <span>📋 Crises Resolved: <span id="dash-crises">0</span></span>
-            </div>
-          </div>
-          <div class="eq-power-badge">
-            <span class="eq-power-badge-val" id="dash-power">0</span>
-            <span class="eq-power-badge-label">Power Index</span>
-          </div>
-        </div>
+  <script>
+    // ── AUTH MODAL STUB ──
+    function openAuth(e, mode) {
+      if(e) e.preventDefault();
+      alert(mode === 'signin' ? 'Sign In — coming soon' : 'Create Account — coming soon');
+    }
 
-        <!-- Stats Grid -->
-        <div class="eq-section-title">Operational Statistics</div>
-        <div class="eq-stats-grid" style="margin-bottom:20px">
-          <div class="eq-stat-card"><span class="eq-stat-val" id="dash-stat-crises">0</span><span class="eq-stat-label">Crises Faced</span></div>
-          <div class="eq-stat-card"><span class="eq-stat-val" id="dash-stat-wins">0</span><span class="eq-stat-label">Outcomes Won</span></div>
-          <div class="eq-stat-card"><span class="eq-stat-val" id="dash-stat-losses">0</span><span class="eq-stat-label">Outcomes Lost</span></div>
-          <div class="eq-stat-card"><span class="eq-stat-val" id="dash-stat-streak">0</span><span class="eq-stat-label">Best Streak</span></div>
-        </div>
-
-        <!-- Threat Matrix -->
-        <div class="eq-section-title">Global Threat Matrix</div>
-        <div class="eq-threat-matrix">
-          <div class="eq-threat-matrix-row"><div class="eq-tm-label">Diplomatic</div><div class="eq-tm-bar-wrap"><div class="eq-tm-bar" id="dtm-diplo"></div></div><div class="eq-tm-val" id="dtm-diplo-v">—</div><div class="eq-tm-status" id="dtm-diplo-s"></div></div>
-          <div class="eq-threat-matrix-row"><div class="eq-tm-label">Military</div><div class="eq-tm-bar-wrap"><div class="eq-tm-bar" id="dtm-milit"></div></div><div class="eq-tm-val" id="dtm-milit-v">—</div><div class="eq-tm-status" id="dtm-milit-s"></div></div>
-          <div class="eq-threat-matrix-row"><div class="eq-tm-label">Economic</div><div class="eq-tm-bar-wrap"><div class="eq-tm-bar" id="dtm-econ"></div></div><div class="eq-tm-val" id="dtm-econ-v">—</div><div class="eq-tm-status" id="dtm-econ-s"></div></div>
-          <div class="eq-threat-matrix-row"><div class="eq-tm-label">Intelligence</div><div class="eq-tm-bar-wrap"><div class="eq-tm-bar" id="dtm-intel"></div></div><div class="eq-tm-val" id="dtm-intel-v">—</div><div class="eq-tm-status" id="dtm-intel-s"></div></div>
-        </div>
-
-        <!-- Active Operations -->
-        <div class="eq-section-title">Active Operations</div>
-        <div class="eq-active-ops" id="dash-ops">
-          <div class="eq-op-item"><div class="eq-op-status-dot standby"></div><div><div class="eq-op-name">OPERATION BLACKTHORN</div><div class="eq-op-desc">Deep-cover surveillance of Ministry of Interior officials. Awaiting your return to active duty.</div></div><div class="eq-op-badge standby-b">Standby</div></div>
-          <div class="eq-op-item"><div class="eq-op-status-dot active"></div><div><div class="eq-op-name">OPERATION SILENT CROWN</div><div class="eq-op-desc">Economic intelligence on sovereign wealth fund activities across allied nations.</div></div><div class="eq-op-badge active-b">Active</div></div>
-          <div class="eq-op-item"><div class="eq-op-status-dot standby"></div><div><div class="eq-op-name">KAREV-7 MONITORING</div><div class="eq-op-desc">Continuous satellite oversight of Karev-7 reactor complex. Technician identity verification ongoing.</div></div><div class="eq-op-badge standby-b">Standby</div></div>
-        </div>
-
-        <!-- Decision Log -->
-        <div class="eq-section-title">Decision Log</div>
-        <div class="eq-decision-log" id="dash-log">
-          <div class="eq-empty-log">No decisions recorded yet.<br>Enter the Crisis Room to begin.</div>
-        </div>
-
-        <!-- Achievements -->
-        <div class="eq-section-title">Achievements</div>
-        <div class="eq-achievements">
-          <div class="eq-achievement-grid" id="dash-achievements">
-            <div class="eq-ach" id="ach-first"><span class="eq-ach-icon">🎖</span><span class="eq-ach-name">First Call</span></div>
-            <div class="eq-ach" id="ach-win3"><span class="eq-ach-icon">🏆</span><span class="eq-ach-name">3 Wins</span></div>
-            <div class="eq-ach" id="ach-power50"><span class="eq-ach-icon">⚡</span><span class="eq-ach-name">Power 50</span></div>
-            <div class="eq-ach" id="ach-allcrises"><span class="eq-ach-icon">🌐</span><span class="eq-ach-name">All Crises</span></div>
-            <div class="eq-ach" id="ach-streak3"><span class="eq-ach-icon">🔥</span><span class="eq-ach-name">Streak 3</span></div>
-            <div class="eq-ach" id="ach-director"><span class="eq-ach-icon">👁</span><span class="eq-ach-name">Director</span></div>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <button class="eq-dash-action" id="dash-enter-crisis">Enter Crisis Room</button>
-        <button class="eq-dash-action secondary" id="dash-logout">Sign Out of EQUINOX</button>
-      </div>
-    </div>
-
-    <!-- Toast container -->
-    <div id="eq-toast-wrap"></div>
-
-    <!-- Threat strip -->
-    <div id="eq-threat-panel">
-      <div class="eq-threat-header">Global Threat Index</div>
-      <div class="eq-threat-row"><div class="eq-threat-label">DIPLO</div><div class="eq-threat-bar-wrap"><div class="eq-threat-bar" id="bar-diplo"></div></div><div class="eq-threat-val" id="val-diplo">52</div></div>
-      <div class="eq-threat-row"><div class="eq-threat-label">MILIT</div><div class="eq-threat-bar-wrap"><div class="eq-threat-bar" id="bar-milit"></div></div><div class="eq-threat-val" id="val-milit">38</div></div>
-      <div class="eq-threat-row"><div class="eq-threat-label">ECON</div><div class="eq-threat-bar-wrap"><div class="eq-threat-bar" id="bar-econ"></div></div><div class="eq-threat-val" id="val-econ">61</div></div>
-      <div class="eq-threat-row"><div class="eq-threat-label">INTEL</div><div class="eq-threat-bar-wrap"><div class="eq-threat-bar" id="bar-intel"></div></div><div class="eq-threat-val" id="val-intel">44</div></div>
-    </div>
-
-    <!-- SIGINT Ticker -->
-    <div id="eq-ticker-wrap">
-      <div id="eq-ticker-label">SIGINT</div>
-      <div id="eq-ticker-track">
-        <span class="eq-tick-item">OPERATION BLACKTHORN — <span>ACTIVE</span></span>
-        <span class="eq-tick-item">ARCTIC GAMMA: Anomalous transmissions — <span>INVESTIGATING</span></span>
-        <span class="eq-tick-item">CHANNEL LAMBDA compromised — <span>BREACH CONFIRMED</span></span>
-        <span class="eq-tick-item">EMBARGO NORDVIK extended 90 days — <span>AUTHORIZED</span></span>
-        <span class="eq-tick-item">CELL ZETA: Radio silence 72h — <span>UNKNOWN</span></span>
-        <span class="eq-tick-item">KAREV-7 REACTOR: Technician IDs unverified — <span>FLAGGED</span></span>
-        <span class="eq-tick-item">SOVEREIGN FUND ACQUISITION: Ports 7, 9 — <span>MONITOR</span></span>
-        <span class="eq-tick-item">OPERATION BLACKTHORN — <span>ACTIVE</span></span>
-        <span class="eq-tick-item">ARCTIC GAMMA: Anomalous transmissions — <span>INVESTIGATING</span></span>
-        <span class="eq-tick-item">CHANNEL LAMBDA compromised — <span>BREACH CONFIRMED</span></span>
-        <span class="eq-tick-item">EMBARGO NORDVIK extended 90 days — <span>AUTHORIZED</span></span>
-        <span class="eq-tick-item">CELL ZETA: Radio silence 72h — <span>UNKNOWN</span></span>
-        <span class="eq-tick-item">KAREV-7 REACTOR: Technician IDs unverified — <span>FLAGGED</span></span>
-        <span class="eq-tick-item">SOVEREIGN FUND ACQUISITION: Ports 7, 9 — <span>MONITOR</span></span>
-      </div>
-    </div>
-
-    <!-- Crisis button -->
-    <button id="eq-crisis-btn" aria-label="Open Crisis Room"><span class="dot"></span>CRISIS ROOM</button>
-
-    <!-- Crisis Panel -->
-    <div id="eq-crisis-panel" role="dialog" aria-modal="true">
-      <div id="eq-drag-handle"><span></span></div>
-      <div class="eq-panel-header">
-        <div>
-          <div class="eq-panel-title">SECURE CHANNEL — EYES ONLY</div>
-          <div class="eq-panel-headline" id="eq-crisis-headline">Loading...</div>
-        </div>
-        <button class="eq-close-btn" id="eq-close-crisis">✕</button>
-      </div>
-      <div class="eq-timer-bar"><div class="eq-timer-fill" id="eq-timer-fill"></div></div>
-      <div class="eq-panel-body">
-        <div class="eq-intel-bar" id="eq-intel-bar"></div>
-        <div class="eq-crisis-desc" id="eq-crisis-desc"></div>
-        <div class="eq-crisis-options" id="eq-crisis-options"></div>
-        <div class="eq-outcome" id="eq-outcome">
-          <div class="eq-outcome-title" id="eq-outcome-title"></div>
-          <div class="eq-outcome-body" id="eq-outcome-body"></div>
-        </div>
-        <div class="eq-score-bar">
-          <div><div class="eq-score-label">Power Index</div><div class="eq-score-val" id="eq-score-val">0</div></div>
-          <button class="eq-next-btn" id="eq-next-btn" disabled>NEXT CRISIS ›</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-
-    <script>
+    // ── INTERACTIVE DOT GRID ──
     (function() {
-      'use strict';
-
-      // ─── STORAGE HELPERS ─────────────────────────────────────────────
-      const LS = {
-        get: k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } },
-        set: (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} },
-        remove: k => { try { localStorage.removeItem(k); } catch(e) {} },
-      };
-
-      // ─── RANK SYSTEM ─────────────────────────────────────────────────
-      function getRank(power) {
-        if (power >= 200) return { name: 'Shadow Chancellor', level: 6 };
-        if (power >= 120) return { name: 'Director', level: 5 };
-        if (power >= 70)  return { name: 'Senior Strategist', level: 4 };
-        if (power >= 35)  return { name: 'Intelligence Officer', level: 3 };
-        if (power >= 10)  return { name: 'Field Operative', level: 2 };
-        return { name: 'Field Analyst', level: 1 };
-      }
-
-      // ─── TOAST ───────────────────────────────────────────────────────
-      function showToast(label, msg, icon, isAchievement) {
-        const wrap = document.getElementById('eq-toast-wrap');
-        const t = document.createElement('div');
-        t.className = 'eq-toast' + (isAchievement ? ' achievement' : '');
-        t.innerHTML = `<div class="eq-toast-icon">${icon||'📡'}</div><div class="eq-toast-body"><div class="eq-toast-label">${label}</div><div class="eq-toast-msg">${msg}</div></div>`;
-        wrap.appendChild(t);
-        setTimeout(() => t.remove(), 3200);
-      }
-
-      // ─── SESSION ─────────────────────────────────────────────────────
-      let currentUser = null;
-
-      function loadSession() {
-        const session = LS.get('eq_session');
-        if (session && session.codename) {
-          const users = LS.get('eq_users') || {};
-          if (users[session.codename.toLowerCase()]) {
-            currentUser = users[session.codename.toLowerCase()];
-            renderAuthState();
-          }
-        }
-      }
-
-      function saveUser() {
-        if (!currentUser) return;
-        const users = LS.get('eq_users') || {};
-        users[currentUser.codename.toLowerCase()] = currentUser;
-        LS.set('eq_users', users);
-      }
-
-      function renderAuthState() {
-        const loggedOut = document.getElementById('eq-auth-logged-out');
-        const loggedIn = document.getElementById('eq-auth-logged-in');
-        if (currentUser) {
-          loggedOut.classList.add('hide');
-          loggedIn.classList.add('show');
-          document.getElementById('eq-topbar-name').textContent = currentUser.codename;
-          const rank = getRank(currentUser.power || 0);
-          document.getElementById('eq-topbar-rank').textContent = rank.name;
-        } else {
-          loggedOut.classList.remove('hide');
-          loggedIn.classList.remove('show');
-        }
-      }
-
-      // ─── AUTH MODAL ──────────────────────────────────────────────────
-      const authModal = document.getElementById('eq-auth-modal');
-      let activeTab = 'signin';
-
-      function openAuth(tab) {
-        activeTab = tab || 'signin';
-        switchTab(activeTab);
-        authModal.classList.add('open');
-        document.body.style.overflow = 'hidden';
-        setTimeout(() => {
-          const input = activeTab === 'signin'
-            ? document.getElementById('si-codename')
-            : document.getElementById('reg-codename');
-          if (input) input.focus();
-        }, 150);
-      }
-      function closeAuth() { authModal.classList.remove('open'); document.body.style.overflow = ''; }
-
-      function switchTab(tab) {
-        activeTab = tab;
-        document.getElementById('eq-tab-signin').classList.toggle('active', tab === 'signin');
-        document.getElementById('eq-tab-register').classList.toggle('active', tab === 'register');
-        document.getElementById('eq-form-signin').style.display = tab === 'signin' ? 'block' : 'none';
-        document.getElementById('eq-form-register').style.display = tab === 'register' ? 'block' : 'none';
-        document.getElementById('eq-auth-modal-title').textContent = tab === 'signin' ? 'Sign In' : 'Create Account';
-      }
-
-      document.getElementById('eq-tab-signin').addEventListener('click', () => switchTab('signin'));
-      document.getElementById('eq-tab-register').addEventListener('click', () => switchTab('register'));
-      document.getElementById('eq-btn-login').addEventListener('click', () => openAuth('signin'));
-      document.getElementById('eq-btn-register').addEventListener('click', () => openAuth('register'));
-      authModal.addEventListener('click', e => { if (e.target === authModal) closeAuth(); });
-
-      // Sign In
-      document.getElementById('si-submit').addEventListener('click', () => {
-        const code = document.getElementById('si-codename').value.trim();
-        const pass = document.getElementById('si-code').value;
-        const err = document.getElementById('si-error');
-        err.classList.remove('show');
-        if (!code) { err.textContent = 'Enter your codename.'; err.classList.add('show'); return; }
-        if (!pass) { err.textContent = 'Enter your access code.'; err.classList.add('show'); return; }
-        const users = LS.get('eq_users') || {};
-        const user = users[code.toLowerCase()];
-        if (!user) { err.textContent = 'Codename not found. Create an account.'; err.classList.add('show'); return; }
-        if (user.pass !== btoa(pass)) { err.textContent = 'Incorrect access code.'; err.classList.add('show'); return; }
-        currentUser = user;
-        LS.set('eq_session', { codename: user.codename });
-        renderAuthState();
-        closeAuth();
-        showToast('AUTHENTICATED', `Welcome back, ${user.codename}.`, '🔓');
-        updateDashboard();
+      const grid = document.querySelector('.dot-grid');
+      let mx = -9999, my = -9999;
+      document.addEventListener('mousemove', e => {
+        mx = e.clientX; my = e.clientY;
+        grid.style.backgroundImage = `
+          radial-gradient(circle 120px at ${mx}px ${my}px, rgba(0,0,0,0.06) 0%, transparent 100%),
+          radial-gradient(circle, rgba(0,0,0,0.13) 1px, transparent 1px)
+        `;
       });
-      ['si-codename','si-code'].forEach(id => {
-        document.getElementById(id).addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('si-submit').click(); });
+      document.addEventListener('mouseleave', () => {
+        grid.style.backgroundImage = `radial-gradient(circle, rgba(0,0,0,0.13) 1px, transparent 1px)`;
       });
-
-      // Register
-      document.getElementById('reg-submit').addEventListener('click', () => {
-        const code = document.getElementById('reg-codename').value.trim().toUpperCase();
-        const pass = document.getElementById('reg-code').value;
-        const pass2 = document.getElementById('reg-code2').value;
-        const err = document.getElementById('reg-error');
-        err.classList.remove('show');
-        if (!code) { err.textContent = 'Choose a codename.'; err.classList.add('show'); return; }
-        if (code.length < 2) { err.textContent = 'Codename must be at least 2 characters.'; err.classList.add('show'); return; }
-        if (!pass || pass.length < 6) { err.textContent = 'Access code must be at least 6 characters.'; err.classList.add('show'); return; }
-        if (pass !== pass2) { err.textContent = 'Access codes do not match.'; err.classList.add('show'); return; }
-        const users = LS.get('eq_users') || {};
-        if (users[code.toLowerCase()]) { err.textContent = 'Codename already taken. Choose another.'; err.classList.add('show'); return; }
-        const newUser = {
-          codename: code, pass: btoa(pass),
-          created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          power: 0, crises: 0, wins: 0, losses: 0, streak: 0, bestStreak: 0,
-          threats: { diplo: 52, milit: 38, econ: 61, intel: 44 },
-          decisionLog: [], achievements: [],
-        };
-        users[code.toLowerCase()] = newUser;
-        LS.set('eq_users', users);
-        currentUser = newUser;
-        LS.set('eq_session', { codename: code });
-        renderAuthState();
-        closeAuth();
-        showToast('IDENTITY ESTABLISHED', `Commander ${code} is now active.`, '🎖', true);
-        updateDashboard();
-      });
-      ['reg-codename','reg-code','reg-code2'].forEach(id => {
-        document.getElementById(id).addEventListener('keydown', e => { if (e.key==='Enter') document.getElementById('reg-submit').click(); });
-      });
-
-      // Logout
-      function logout() {
-        LS.remove('eq_session');
-        currentUser = null;
-        renderAuthState();
-        closeDashboard();
-        showToast('SESSION TERMINATED', 'You have been signed out.', '🔒');
-      }
-      document.getElementById('eq-btn-logout').addEventListener('click', logout);
-      document.getElementById('dash-logout').addEventListener('click', logout);
-
-      // ─── DASHBOARD ───────────────────────────────────────────────────
-      const dashPanel = document.getElementById('eq-dash-panel');
-
-      function openDashboard() {
-        updateDashboard();
-        dashPanel.classList.add('open');
-        document.body.style.overflow = 'hidden';
-      }
-      function closeDashboard() {
-        dashPanel.classList.remove('open');
-        document.body.style.overflow = '';
-      }
-      document.getElementById('eq-btn-open-dash').addEventListener('click', openDashboard);
-      document.getElementById('eq-dash-close').addEventListener('click', closeDashboard);
-      document.getElementById('dash-enter-crisis').addEventListener('click', () => { closeDashboard(); openCrisis(); });
-
-      function updateDashboard() {
-        if (!currentUser) return;
-        const u = currentUser;
-        const rank = getRank(u.power);
-
-        // Commander card
-        document.getElementById('dash-avatar').textContent = u.codename.charAt(0);
-        document.getElementById('dash-codename').textContent = u.codename;
-        document.getElementById('dash-rank').textContent = rank.name;
-        document.getElementById('dash-joined').textContent = u.created;
-        document.getElementById('dash-crises').textContent = u.crises;
-        document.getElementById('dash-power').textContent = u.power;
-        document.getElementById('eq-topbar-rank').textContent = rank.name;
-
-        // Stats
-        document.getElementById('dash-stat-crises').textContent = u.crises;
-        document.getElementById('dash-stat-wins').textContent = u.wins;
-        document.getElementById('dash-stat-losses').textContent = u.losses;
-        document.getElementById('dash-stat-streak').textContent = u.bestStreak;
-
-        // Threat matrix
-        const t = u.threats;
-        ['diplo','milit','econ','intel'].forEach(k => {
-          const v = t[k];
-          const col = v >= 70 ? '#ff4444' : v >= 50 ? '#ffc844' : '#00ffe0';
-          const status = v >= 70 ? 'Critical' : v >= 50 ? 'Elevated' : 'Stable';
-          const bar = document.getElementById('dtm-' + k);
-          const valEl = document.getElementById('dtm-' + k + '-v');
-          const stEl = document.getElementById('dtm-' + k + '-s');
-          if (bar) { bar.style.width = v + '%'; bar.style.background = col; }
-          if (valEl) { valEl.textContent = v; valEl.style.color = col; }
-          if (stEl) { stEl.textContent = status; stEl.style.color = col; }
-        });
-
-        // Decision log
-        const logEl = document.getElementById('dash-log');
-        if (u.decisionLog && u.decisionLog.length) {
-          logEl.innerHTML = [...u.decisionLog].reverse().slice(0, 8).map(d => `
-            <div class="eq-decision-item">
-              <div class="eq-di-dot ${d.win ? 'win' : 'loss'}"></div>
-              <div class="eq-di-content">
-                <div class="eq-di-title">${d.crisis}</div>
-                <div class="eq-di-meta">${d.outcome} • ${d.date}</div>
-              </div>
-              <div class="eq-di-score ${d.score >= 0 ? 'pos' : 'neg'}">${d.score >= 0 ? '+' : ''}${d.score}</div>
-            </div>
-          `).join('');
-        } else {
-          logEl.innerHTML = '<div class="eq-empty-log">No decisions recorded yet.<br>Enter the Crisis Room to begin.</div>';
-        }
-
-        // Achievements
-        const achs = u.achievements || [];
-        ['first','win3','power50','allcrises','streak3','director'].forEach(id => {
-          const el = document.getElementById('ach-' + id);
-          if (el) el.classList.toggle('unlocked', achs.includes(id));
-        });
-      }
-
-      // ─── THREE.JS GLOBE ──────────────────────────────────────────────
-      const canvas = document.getElementById('eq-bg-canvas');
-      const mobile = window.innerWidth < 640;
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: !mobile, alpha: true });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
-      renderer.setClearColor(0x000000, 0);
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 200);
-      camera.position.set(0, 0, mobile ? 5.5 : 4.8);
-
-      const globeR = mobile ? 1.4 : 1.6;
-      const globe = new THREE.Mesh(
-        new THREE.SphereGeometry(globeR, mobile ? 32 : 64, mobile ? 32 : 64),
-        new THREE.MeshPhongMaterial({ color:0x000d18, emissive:0x001633, emissiveIntensity:0.25, transparent:true, opacity:0.72 })
-      );
-      scene.add(globe);
-      const wireframe = new THREE.Mesh(
-        new THREE.SphereGeometry(globeR+0.005, mobile ? 20 : 32, mobile ? 20 : 32),
-        new THREE.MeshBasicMaterial({ color:0x00ffe0, wireframe:true, transparent:true, opacity:0.055 })
-      );
-      scene.add(wireframe);
-      scene.add(new THREE.Mesh(
-        new THREE.SphereGeometry(globeR+0.14, 24, 24),
-        new THREE.MeshPhongMaterial({ color:0x001833, emissive:0x002244, emissiveIntensity:0.65, transparent:true, opacity:0.17, side:THREE.BackSide })
-      ));
-      scene.add(new THREE.AmbientLight(0x001033, 0.5));
-      const dirL = new THREE.DirectionalLight(0x00ffe0, 0.55); dirL.position.set(3,2,4); scene.add(dirL);
-      const redL = new THREE.PointLight(0xff2200, 0.35, 8); redL.position.set(-3,-1,2); scene.add(redL);
-
-      // Globe dots
-      const dotGeo = new THREE.SphereGeometry(0.02, 6, 6);
-      const dotMat = new THREE.MeshBasicMaterial({ color:0xff3300 });
-      [[0.6,1.0,1.1],[-1.2,0.5,0.9],[0.9,-0.7,1.1],[-0.4,1.3,0.9],[1.3,0.2,0.8],[-0.8,-1.0,1.1]].forEach(p => {
-        const v = new THREE.Vector3(...p).normalize().multiplyScalar(globeR+0.02);
-        const d = new THREE.Mesh(dotGeo, dotMat); d.position.copy(v); scene.add(d);
-      });
-
-      // Connection lines between dots
-      const linePoints = [[0.6,1.0,1.1],[-1.2,0.5,0.9],[0.9,-0.7,1.1],[-0.4,1.3,0.9]].map(p => new THREE.Vector3(...p).normalize().multiplyScalar(globeR+0.025));
-      for (let i = 0; i < linePoints.length; i++) {
-        for (let j = i+1; j < linePoints.length; j++) {
-          const geo = new THREE.BufferGeometry().setFromPoints([linePoints[i], linePoints[j]]);
-          const mat = new THREE.LineBasicMaterial({ color:0x00ffe0, transparent:true, opacity:0.12 });
-          scene.add(new THREE.Line(geo, mat));
-        }
-      }
-
-      // Stars
-      const pCount = mobile ? 500 : 1100;
-      const pPos = new Float32Array(pCount*3);
-      for (let i=0; i<pCount; i++) { const r=2.2+Math.random()*7, t=Math.random()*Math.PI*2, p=Math.acos(2*Math.random()-1); pPos[i*3]=r*Math.sin(p)*Math.cos(t); pPos[i*3+1]=r*Math.sin(p)*Math.sin(t); pPos[i*3+2]=r*Math.cos(p); }
-      const pGeo = new THREE.BufferGeometry(); pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-      scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color:0x00ffe0, size:0.015, transparent:true, opacity:0.42 })));
-
-      function makeRing(r, col, op) {
-        const g=new THREE.RingGeometry(r, r+0.004, 96), m=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op,side:THREE.DoubleSide});
-        return new THREE.Mesh(g, m);
-      }
-      const ring1=makeRing(globeR+0.32,0x00ffe0,0.16); ring1.rotation.x=Math.PI/2.5;
-      const ring2=makeRing(globeR+0.62,0x0044ff,0.09); ring2.rotation.x=Math.PI/1.4; ring2.rotation.z=0.4;
-      const ring3=makeRing(globeR+0.92,0xff2200,0.06); ring3.rotation.x=Math.PI/3; ring3.rotation.y=1.0;
-      scene.add(ring1,ring2,ring3);
-
-      window.addEventListener('resize', () => {
-        camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-      });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-
-      let tX=0,tY=0,cX=0,cY=0;
-      if (!window.matchMedia('(hover: none)').matches) {
-        document.addEventListener('mousemove', e => { tX=(e.clientX/window.innerWidth-0.5)*0.22; tY=(e.clientY/window.innerHeight-0.5)*0.22; });
-      } else {
-        window.addEventListener('deviceorientation', e => { if(e.gamma!=null){tX=e.gamma/90*0.18; tY=e.beta/90*0.13;} });
-      }
-
-      let frame=0;
-      (function animate() {
-        requestAnimationFrame(animate); frame++;
-        cX+=(tX-cX)*0.04; cY+=(tY-cY)*0.04;
-        globe.rotation.y+=0.0009; wireframe.rotation.y+=0.0009;
-        ring1.rotation.z+=0.0015; ring2.rotation.z-=0.0009; ring3.rotation.y+=0.0007;
-        camera.position.x=cX*0.5; camera.position.y=-cY*0.5; camera.lookAt(0,0,0);
-        renderer.render(scene, camera);
-      })();
-      setTimeout(() => canvas.classList.add('visible'), 500);
-
-      // ─── CUSTOM CURSOR ────────────────────────────────────────────────
-      if (!window.matchMedia('(hover: none)').matches) {
-        const cur=document.getElementById('eq-cursor'), curT=document.getElementById('eq-cursor-trail');
-        cur.classList.add('on'); curT.classList.add('on');
-        document.addEventListener('mousemove', e => {
-          cur.style.left=e.clientX+'px'; cur.style.top=e.clientY+'px';
-          setTimeout(()=>{curT.style.left=e.clientX+'px'; curT.style.top=e.clientY+'px';}, 90);
-        });
-        document.addEventListener('mouseover', e => {
-          const t=e.target;
-          cur.classList.toggle('big', !!(t&&(t.tagName==='A'||t.tagName==='BUTTON'||t.onclick||getComputedStyle(t).cursor==='pointer')));
-        });
-      }
-
-      // ─── GSAP SCROLL ANIMATIONS ───────────────────────────────────────
-      if (window.gsap && window.ScrollTrigger) {
-        gsap.registerPlugin(ScrollTrigger);
-        function applyScrollAnims() {
-          const root=document.getElementById('root');
-          if (!root||!root.children.length) { setTimeout(applyScrollAnims, 300); return; }
-          root.querySelectorAll('section,article,h1,h2,h3,[class*="card"],[class*="feature"],[class*="section"]').forEach((el,i)=>{
-            if (el.classList.contains('eq-reveal')) return;
-            el.classList.add('eq-reveal');
-            ScrollTrigger.create({ trigger:el, start:'top 90%', once:true,
-              onEnter:()=>gsap.to(el, { opacity:1, y:0, duration:0.6, delay:(i%4)*0.06, ease:'power2.out', onStart:()=>el.classList.add('in') }) });
-          });
-          const h1=root.querySelector('h1');
-          if (h1&&!h1.classList.contains('eq-glitch')) {
-            h1.classList.add('eq-glitch'); h1.setAttribute('data-text',h1.textContent);
-            (function gl(){h1.classList.add('glitching'); setTimeout(()=>h1.classList.remove('glitching'),180); setTimeout(gl,4800+Math.random()*4000);})();
-          }
-        }
-        applyScrollAnims();
-        gsap.to('#eq-bg-canvas', { yPercent:14, ease:'none', scrollTrigger:{ trigger:'body', start:'top top', end:'bottom bottom', scrub:true } });
-      }
-
-      // ─── HOTSPOTS ─────────────────────────────────────────────────────
-      [[18,24,'NORTH ATLANTIC'],[74,30,'EASTERN BLOC BORDER'],[62,48,'CASPIAN FIELDS'],[65,63,'HORMUZ STRAIT']].forEach(([x,y,name])=>{
-        const hs=document.createElement('div'); hs.className='eq-hotspot'; hs.style.left=x+'vw'; hs.style.top=y+'vh';
-        const tip=document.createElement('div'); tip.className='eq-hotspot-tooltip'; tip.textContent=name;
-        hs.appendChild(tip); hs.addEventListener('click',()=>openCrisis()); document.body.appendChild(hs);
-      });
-
-      // ─── GLOBAL THREAT STATE ──────────────────────────────────────────
-      let threats = { diplo:52, milit:38, econ:61, intel:44 };
-
-      function threatColor(v) { return v>=70?'#ff4444':v>=50?'#ffc844':'#00ffe0'; }
-
-      function updateThreatUI() {
-        ['diplo','milit','econ','intel'].forEach(k=>{
-          const v=threats[k], col=threatColor(v);
-          const bar=document.getElementById('bar-'+k), valEl=document.getElementById('val-'+k);
-          if(bar){bar.style.width=v+'%'; bar.style.background=col;}
-          if(valEl){valEl.textContent=v; valEl.style.color=col;}
-        });
-        if(currentUser){currentUser.threats={...threats}; saveUser();}
-      }
-      updateThreatUI();
-
-      const THREAT_FX = {
-        0:{A:{diplo:-4,intel:+8},B:{intel:-10,milit:+5},C:{intel:+6,diplo:-3},D:{milit:+12,intel:+4}},
-        1:{A:{diplo:-8,intel:+6},B:{intel:+14,milit:+2},C:{diplo:-5,intel:+8},D:{diplo:+4,milit:-8}},
-        2:{A:{econ:-6,intel:+10},B:{econ:-4,diplo:+2},C:{econ:+14,diplo:-6},D:{econ:+4,diplo:-6}},
-        3:{A:{milit:+8,diplo:-4},B:{intel:+10,milit:-3},C:{diplo:+8,intel:-4},D:{milit:-6,econ:+6}},
-        4:{A:{intel:+12,diplo:-6},B:{econ:+8,intel:-4},C:{diplo:+6,econ:-3},D:{milit:+5,econ:+5}},
-        5:{A:{diplo:-10,milit:+6},B:{diplo:+6,milit:-4},C:{intel:+8,econ:-3},D:{econ:+10,diplo:-5}},
-      };
-
-      function applyThreatEffect(optKey, idx) {
-        const e=(THREAT_FX[idx%6]||{})[optKey]||{};
-        Object.entries(e).forEach(([k,v])=>{ threats[k]=Math.max(0,Math.min(100,threats[k]+v)); });
-        updateThreatUI();
-        const max=Math.max(...Object.values(threats));
-        redL.intensity = max>=70 ? 0.65 : 0.35;
-        redL.color.setHex(max>=70 ? 0xff0000 : 0xff2200);
-      }
-
-      // ─── CRISIS ROOM ──────────────────────────────────────────────────
-      const CRISES = [
-        {
-          headline:'Agent VEGA Has Gone Dark',
-          tags:[{l:'PRIORITY ALPHA',c:'red'},{l:'HUMINT',c:'blue'},{l:'TIME-SENSITIVE',c:'yellow'}],
-          desc:'Deep-cover asset VEGA — embedded within the Ministry of Interior — has missed three consecutive check-ins. Last transmission suggests imminent exposure. Enemy counterintelligence is closing in. Your move determines whether VEGA survives and your network stays intact.',
-          options:[
-            {k:'A',t:'Activate emergency extraction — pull VEGA out tonight',e:'+12 Agent Safety / −6 Network Exposure',s:12,o:{w:true,t:'EXTRACTION SUCCESSFUL',b:'VEGA is out. Network integrity maintained. However, the empty slot has been noticed by ministry counterparts. Expect increased surveillance on remaining assets.'}},
-            {k:'B',t:'Order VEGA to go to ground — wait 72 hours for a cold window',e:'+3 Deniability / −15 Agent Risk',s:-4,o:{w:false,t:'VEGA COMPROMISED',b:'The wait was too long. VEGA was detained at 0340 hours. Compartmentalization held — network intact — but a valuable asset is burned. Power index drops.'}},
-            {k:'C',t:'Flood the zone — deploy counter-disinformation to burn the lead',e:'+8 Confusion / −4 Resources',s:8,o:{w:true,t:'OPERATION SMOKEHOUSE — SUCCESS',b:'Disinformation worked. VEGA has a 6-hour window. Exfiltration team moving. Cost: two burned communication lines and a considerable budget draw.'}},
-            {k:'D',t:'Sacrifice VEGA — protect the network at all costs',e:'−20 Ethics / +18 Network Security',s:3,o:{w:false,t:'COLD CALCULUS',b:"VEGA was abandoned. The network holds. But your handler corps knows what you're capable of. Recruitment will be harder."}},
-          ],
-        },
-        {
-          headline:'Karev-7 Reactor — Unscheduled Shutdown',
-          tags:[{l:'CRITICAL',c:'red'},{l:'TECHNICAL INTEL',c:'blue'}],
-          desc:'Satellite imaging shows an unscheduled 48-hour shutdown at Karev-7 — a civilian-designated facility. SIGINT intercepts suggest foreign technicians brought in under diplomatic cover. Analysts are split: sabotage, covert enrichment, or something else entirely.',
-          options:[
-            {k:'A',t:'Demand IAEA access — trigger a diplomatic incident immediately',e:'+14 Transparency / −10 Relations',s:6,o:{w:true,t:'INSPECTION GRANTED',b:'Pressure worked. IAEA access granted reluctantly. Facility came back clean — but the precedent is set. Adversary now knows you are watching closely.'}},
-            {k:'B',t:'Insert a HUMINT asset into the facility under maintenance cover',e:'+18 Intelligence / −12 Asset Risk',s:14,o:{w:true,t:'PAYLOAD CONFIRMED',b:'Your asset confirmed covert enrichment activity. The intelligence is priceless. Your Security Council briefing tomorrow will reshape the alliance calculus.'}},
-            {k:'C',t:'Share raw SIGINT with five allies — build a coalition response',e:'+10 Alliances / −8 Source Protection',s:8,o:{w:true,t:'COALITION INTEL BRIEF',b:'Allies are aligned. A joint statement in 48 hours. Downside: sharing the raw intercept exposed your collection method. That source is now burned.'}},
-            {k:'D',t:'Do nothing — insufficient evidence to act',e:'+0 Risk / −20 Strategic Advantage',s:-8,o:{w:false,t:'WINDOW MISSED',b:'The facility resumed operations. Months later, confirmation arrived. You had the right intelligence and chose inaction. The reactor is now operational and fortified.'}},
-          ],
-        },
-        {
-          headline:'The Kessler File — Economic Coup',
-          tags:[{l:'FINANCIAL WARFARE',c:'yellow'},{l:'COVERT',c:'red'}],
-          desc:"A foreign sovereign wealth fund has been quietly acquiring controlling stakes in critical infrastructure across three allied nations — ports, energy grids, telecom. Financially legal. Strategically dangerous. Minister Kessler is the back-channel. He's for sale.",
-          options:[
-            {k:'A',t:'Pay Kessler — acquire his cooperation and redirect the fund',e:'+16 Economic Control / −12 Integrity',s:10,o:{w:true,t:'KESSLER TURNED',b:"Kessler is yours. The fund's acquisitions are now subtly misdirected. Two critical assets steered away from enemy hands. The cost was significant — in every sense."}},
-            {k:'B',t:'Expose Kessler publicly — force allied governments to act',e:'+10 Transparency / −14 Deniability',s:4,o:{w:false,t:'CONTROLLED BURN',b:'Kessler is finished. But the exposure spooked the fund — it went quiet, restructured through three additional shell entities. Harder to track now.'}},
-            {k:'C',t:'Orchestrate a counter-acquisition via friendly sovereign capital',e:'+20 Strategic Assets / −18 Resources',s:18,o:{w:true,t:'FINANCIAL COUNTERSTRIKE',b:'Brilliant. Friendly capital quietly outbid the fund on two critical ports. The operation cost enormously but the strategic advantage is decisive and lasting.'}},
-            {k:'D',t:'Sanction the fund directly — maximum economic pressure',e:'+8 Deterrence / −12 Trade Relations',s:5,o:{w:true,t:'PRESSURE APPLIED',b:'Sanctions landed. Fund paused expansion. Allies nervous about collateral impact on their own economies. A battle won, war continues at higher temperature.'}},
-          ],
-        },
-        {
-          headline:'Defection Request — General Malik',
-          tags:[{l:'ASSET ACQUISITION',c:'blue'},{l:'HIGH VALUE',c:'red'}],
-          desc:'General Malik — third in command of the Nordvik Strategic Missile Forces — has made contact through a back-channel. He wants to defect. He is offering full access to weapons disposition maps, launch codes architecture, and names of three deep-cover agents in your country. The window is 48 hours.',
-          options:[
-            {k:'A',t:'Accept the defection — move Malik to a safe house immediately',e:'+22 Intelligence / −14 Alliance Risk',s:22,o:{w:true,t:'ASSET SECURED',b:'Malik is out. The intelligence he carried has already changed your strategic picture entirely. Nordvik is furious — diplomatic fallout incoming, but the advantage is yours.'}},
-            {k:'B',t:'Verify authenticity first — delay extraction by 24 hours',e:'+8 Confidence / −10 Timing',s:4,o:{w:false,t:'WINDOW CLOSED',b:'Verification took too long. Malik was arrested at 0600 hours. The intelligence died with his freedom. Nordvik has now purged three divisions. You had one chance.'}},
-            {k:'C',t:'Decline — this feels like a provocation designed to expose your network',e:'+12 Network Security / −15 Intelligence',s:6,o:{w:false,t:'MISSED ASSET',b:'Your caution was understandable but misplaced. Malik defected to a rival service 36 hours later. They now have everything he offered you. The loss is significant.'}},
-            {k:'D',t:'Use Malik as a double — feed him disinformation and send him back',e:'+20 Deception / −8 Ethics',s:14,o:{w:true,t:'OPERATION MIRROR',b:'Malik returned carrying your disinformation. Nordvik acted on it — repositioning two missile batteries to locations you can now monitor in real time. Masterful.'}},
-          ],
-        },
-        {
-          headline:'The Cipher Leak — Inside the Building',
-          tags:[{l:'INTERNAL THREAT',c:'red'},{l:'COUNTERINTELLIGENCE',c:'blue'},{l:'URGENT',c:'yellow'}],
-          desc:"An encrypted internal audit has flagged anomalous data transfers from within your own agency — specifically from someone with analyst-level access who's been here six years. You know the four most likely candidates. The leak, if confirmed, has already compromised two active operations.",
-          options:[
-            {k:'A',t:'Arrest all four suspects immediately — contain the damage first',e:'+14 Security / −16 Morale & Trust',s:8,o:{w:false,t:'OVERREACH',b:'Three of the four were innocent. Agency morale collapsed. The actual mole — who was not among the four you arrested — went quiet and is now untraceable. You lost two ways.'}},
-            {k:'B',t:'Feed each suspect unique false intelligence — identify the mole through their transmission',e:'+20 Precision / −8 Time',s:20,o:{w:true,t:'MOLE IDENTIFIED',b:'Classic canary trap. Within 18 hours, analyst Harper transmitted the false intelligence through the compromised channel. Arrest made. Operations rebuilt. Textbook.'}},
-            {k:'C',t:'Quietly remove all four from sensitive access — investigate without alerting the mole',e:'+12 Containment / −6 Operations',s:10,o:{w:true,t:'CONTAINED',b:'Smart. Removing access stopped the bleeding. Over three weeks of patient observation, the mole revealed themselves. Clean arrest, no operational damage.'}},
-            {k:'D',t:'Do nothing yet — you need more evidence before acting',e:'+4 Certainty / −18 Ongoing Damage',s:-6,o:{w:false,t:'BLEEDING OUT',b:"Inaction was costly. While you gathered evidence, two more operations were compromised. By the time you moved, the mole had burned their tracks. You'll never know who it was."}},
-          ],
-        },
-        {
-          headline:'Arktis-9 — The Last 72 Hours',
-          tags:[{l:'EXISTENTIAL',c:'red'},{l:'NUCLEAR',c:'red'},{l:'EYES ONLY',c:'yellow'}],
-          desc:"Intercepts confirm ARKTIS-9 — a classified adversary first-strike protocol — has been activated. The 72-hour clock began four hours ago. Your nuclear early-warning infrastructure shows three anomalies consistent with pre-launch preparation. This may be real. Or it may be an elaborate provocation. You have 68 hours to decide.",
-          options:[
-            {k:'A',t:'Raise your own alert posture to DEFCON 2 — signal that you are ready to respond',e:'+18 Deterrence / −20 Escalation Risk',s:10,o:{w:true,t:'DETERRENCE HOLDS',b:'The alert posture shift was noticed. Back-channel communication opened within four hours. The activation was a test of resolve — they blinked. Crisis averted, for now.'}},
-            {k:'B',t:'Seek direct back-channel communication with their Defense Minister',e:'+22 De-escalation / −12 Perception',s:18,o:{w:true,t:'BACK-CHANNEL SUCCESS',b:'Quiet diplomacy worked where military posturing would have failed. The activation is stood down. You traded a concession on territorial waters — a price worth paying.'}},
-            {k:'C',t:'Launch a pre-emptive cyberattack on their early-warning systems',e:'+16 Initiative / −24 Irreversibility',s:6,o:{w:false,t:'CATASTROPHIC MISCALCULATION',b:'The cyberattack was interpreted as the opening move of a first strike. The next 18 hours were the most dangerous in modern history. You pulled the world to the edge.'}},
-            {k:'D',t:'Do nothing — assess for 24 more hours before any response',e:'+6 Information / −14 Readiness',s:2,o:{w:false,t:'WINDOW OF VULNERABILITY',b:'The 24-hour delay was registered as indecision. Adversary missile forces moved to higher readiness. Your allies lost confidence. The crisis deepened before it was resolved.'}},
-          ],
-        },
-      ];
-
-      let crisisIdx=0, score=0, chosen=false, streak=0, timer=null;
-      const panel=document.getElementById('eq-crisis-panel');
-
-      function openCrisis() { loadCrisis(crisisIdx); panel.classList.add('open'); document.body.style.overflow='hidden'; }
-      function closeCrisis() { clearTimer(); panel.classList.remove('open'); document.body.style.overflow=''; }
-
-      function startTimer() {
-        clearTimer();
-        let pct=100; const fill=document.getElementById('eq-timer-fill'); fill.style.width='100%'; fill.style.background='#00ffe0';
-        timer=setInterval(()=>{
-          pct-=0.4;
-          if(pct<=0){clearTimer(); if(!chosen) autoChoose();}
-          fill.style.width=pct+'%';
-          fill.style.background=pct>50?'#00ffe0':pct>25?'#ffc844':'#ff4444';
-        }, 100);
-      }
-      function clearTimer() { if(timer){clearInterval(timer); timer=null;} }
-      function autoChoose() {
-        const opts=document.querySelectorAll('.eq-crisis-opt');
-        if(opts.length) opts[Math.floor(Math.random()*opts.length)].click();
-      }
-
-      function loadCrisis(idx) {
-        const c=CRISES[idx%CRISES.length]; chosen=false;
-        document.getElementById('eq-crisis-headline').textContent=c.headline;
-        const bar=document.getElementById('eq-intel-bar'); bar.innerHTML='';
-        c.tags.forEach(t=>{ const ch=document.createElement('div'); ch.className='eq-intel-chip '+t.c; ch.textContent=t.l; bar.appendChild(ch); });
-        document.getElementById('eq-crisis-desc').textContent=c.desc;
-        const optWrap=document.getElementById('eq-crisis-options'); optWrap.innerHTML='';
-        c.options.forEach(opt=>{
-          const d=document.createElement('div'); d.className='eq-crisis-opt'; d.setAttribute('role','button'); d.setAttribute('tabindex','0');
-          d.innerHTML=`<div class="eq-opt-key">${opt.k}</div><div><div class="eq-opt-text">${opt.t}</div><div class="eq-opt-effect">${opt.e}</div></div>`;
-          const pick=()=>{
-            if(chosen) return; chosen=true; clearTimer();
-            d.classList.add(opt.o.w?'chosen':'wrong');
-            score+=opt.s;
-            document.getElementById('eq-score-val').textContent=score;
-            document.getElementById('eq-outcome').className='eq-outcome show'+(opt.o.w?'':' fail');
-            document.getElementById('eq-outcome-title').textContent=opt.o.t;
-            document.getElementById('eq-outcome-body').textContent=opt.o.b;
-            document.getElementById('eq-next-btn').disabled=false;
-            applyThreatEffect(opt.k, idx%6);
-            // Update user stats
-            if(currentUser){
-              currentUser.power=score;
-              currentUser.crises=(currentUser.crises||0)+1;
-              if(opt.o.w){currentUser.wins=(currentUser.wins||0)+1; streak++;} else{currentUser.losses=(currentUser.losses||0)+1; streak=0;}
-              currentUser.bestStreak=Math.max(currentUser.bestStreak||0, streak);
-              currentUser.decisionLog=currentUser.decisionLog||[];
-              currentUser.decisionLog.push({ crisis:c.headline, outcome:opt.o.t, score:opt.s, win:opt.o.w, date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}) });
-              checkAchievements();
-              saveUser();
-              document.getElementById('eq-topbar-rank').textContent=getRank(score).name;
-            }
-            setTimeout(()=>document.getElementById('eq-outcome').scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
-          };
-          d.addEventListener('click', pick);
-          d.addEventListener('keydown', e=>{if(e.key==='Enter'||e.key===' ')pick();});
-          optWrap.appendChild(d);
-        });
-        document.getElementById('eq-outcome').className='eq-outcome';
-        document.getElementById('eq-next-btn').disabled=true;
-        startTimer();
-      }
-
-      function checkAchievements() {
-        if(!currentUser) return;
-        const u=currentUser; u.achievements=u.achievements||[];
-        const add=(id, label, icon)=>{ if(!u.achievements.includes(id)){ u.achievements.push(id); showToast('ACHIEVEMENT UNLOCKED', label, icon, true); } };
-        if(u.crises>=1) add('first','First crisis resolved','🎖');
-        if(u.wins>=3) add('win3','3 successful outcomes','🏆');
-        if(u.power>=50) add('power50','Power Index reached 50','⚡');
-        if(u.crises>=6) add('allcrises','All 6 scenarios completed','🌐');
-        if(u.bestStreak>=3) add('streak3','3-win streak achieved','🔥');
-        if(getRank(u.power).level>=5) add('director','Reached Director rank','👁');
-      }
-
-      document.getElementById('eq-crisis-btn').addEventListener('click', openCrisis);
-      document.getElementById('eq-close-crisis').addEventListener('click', closeCrisis);
-      document.getElementById('eq-next-btn').addEventListener('click', ()=>{ crisisIdx++; loadCrisis(crisisIdx); });
-      document.addEventListener('keydown', e=>{
-        if(e.key==='Escape'){ closeCrisis(); closeAuth(); closeDashboard(); return; }
-        if(!panel.classList.contains('open')||chosen) return;
-        const k=e.key.toUpperCase(); const i='ABCD'.indexOf(k);
-        if(i>=0){ const opts=document.querySelectorAll('.eq-crisis-opt'); if(opts[i]) opts[i].click(); }
-      });
-      panel.addEventListener('touchstart', e=>{ panel._ts=e.touches[0].clientY; },{passive:true});
-      panel.addEventListener('touchend', e=>{ if(e.changedTouches[0].clientY-panel._ts>80&&panel.scrollTop<=0) closeCrisis(); },{passive:true});
-
-      // ─── CLICK PARTICLES ──────────────────────────────────────────────
-      document.addEventListener('click', e=>{
-        if(e.target.closest('#eq-crisis-panel')||e.target.closest('#eq-dash-panel')||e.target.closest('#eq-auth-modal')) return;
-        for(let i=0;i<5;i++){
-          const p=document.createElement('div'); p.className='eq-particle';
-          p.style.left=e.clientX+'px'; p.style.top=e.clientY+'px'; document.body.appendChild(p);
-          const angle=(i/5)*Math.PI*2, dist=24+Math.random()*22;
-          if(window.gsap) gsap.to(p,{x:Math.cos(angle)*dist,y:Math.sin(angle)*dist,opacity:0,duration:0.45+Math.random()*0.2,ease:'power2.out',onComplete:()=>p.remove()});
-          else setTimeout(()=>p.remove(),500);
-        }
-      });
-
-      // ─── INIT ─────────────────────────────────────────────────────────
-      // Load session on startup
-      loadSession();
-
-      // Load user threats if logged in
-      if (currentUser && currentUser.threats) {
-        threats = { ...currentUser.threats };
-        updateThreatUI();
-      }
-
     })();
-    </script>
-  </body>
+  </script>
+</body>
 </html>
